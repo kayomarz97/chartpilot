@@ -1,0 +1,13 @@
+PHASE: 00 (Research / Audit)
+GIT_SHA: f063460f20e1126fde3ecc5181b8ecb23f46aa55
+UTC: 2026-08-20T02:14:11Z
+--- Acceptance criteria (SPEC §65.4 Phase 0) ---
+[x] RESEARCH.md exists with dated "Flaws found in supplied specification" section
+[x] QUESTIONS.md exists; all entries material; user answered Q1-Q3
+[x] Environment audit committed (journal.md: Python/Node/Docker/gcloud/gh/git versions + auth)
+[x] Live Gemini model catalogue researched with discovery date (research/gemini-notes.md, 2026-08-20)
+[x] No application code committed
+NOTE: make check does not exist until Phase 2 (backend skeleton). For Phases 0-1 the machine-checkable
+gate is substituted by this manually-recorded evidence file + git tag (substitution recorded in journal.md
+per SPEC §65.4). Automated make-check gating begins at Phase 2.
+RESULT: PASS

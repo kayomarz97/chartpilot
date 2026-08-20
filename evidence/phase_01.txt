@@ -1,0 +1,10 @@
+PHASE: 01 (Plan / Repository)
+GIT_SHA: f063460f20e1126fde3ecc5181b8ecb23f46aa55
+UTC: 2026-08-20T02:14:11Z
+--- Acceptance criteria (SPEC §65.4 Phase 1) ---
+[x] All QUESTIONS.md items have recorded answers (reuse=yes+disclose; isolated GCP project; Gemini both models; asia-south1; tight scope)
+[x] PLAN.md finalized with phase-by-phase scope + 11-day schedule
+[x] GitHub repo created: https://github.com/kayomarz97/chartpilot (private); main seeded; dev branch pushed
+[x] .gitignore blocks .env / credentials / evidence caches; manual secret-scan clean (no hardcoded secrets)
+[ ] secret-scan integrated into make check  -> DEFERRED to Phase 2 (make check introduced there)
+RESULT: PASS (with noted Phase-2 deferral)
