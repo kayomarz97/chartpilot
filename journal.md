@@ -1,6 +1,14 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 4 COMPLETE (clinical normalizer + temporal engine). Running straight through to Phase 6 (user directive).
+Step: app/normalize/ (temporal, units, models, observation, adr, medication, errors). `make check PHASE=04`
+  exit 0, 70 tests. Opus re-ran + read temporal.py/units.py deeply (interval ordering + Decimal conversions correct).
+Next action (in-progress this session): PHASE 5 — ClinicalValidityEngine + K_HIGH_RISK_001 + eGFR validity;
+  then PHASE 6 — evidence layer (openFDA + PubMed cache + snapshots + guideline pack). Ping user after Phase 6.
+Prev "Current Status" (Phase 3) below is superseded.
+
+## Superseded status log
 Phase: 3 COMPLETE (FHIR read layer over local fixtures). Ready to start Phase 4 (normalizer/temporal).
 Step: app/fhir/ (errors, transport, client). Loop-safe pagination + max_pages/max_resources + typed
   fail-closed errors + retry/backoff (429/5xx) with no-retry-on-auth. `make check PHASE=03` exit 0, 20 tests.

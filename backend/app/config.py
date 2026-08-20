@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     Optional:
       - allow_synthetic_debug_logs: must default to False and must never be
         implicitly enabled (spec §54).
+      - display_timezone: IANA name used to render coarse-precision
+        clinical timestamps for humans; defaults to "Asia/Kolkata". This is
+        a display convention, not a secret/environment-specific value.
     """
 
     model_config = SettingsConfigDict(
@@ -48,6 +51,7 @@ class Settings(BaseSettings):
     gemini_api_key: str
 
     allow_synthetic_debug_logs: bool = False
+    display_timezone: str = "Asia/Kolkata"
 
 
 @lru_cache(maxsize=1)

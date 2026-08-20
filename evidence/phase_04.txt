@@ -1,0 +1,43 @@
+04
+32e0240591984f4c531b134885f7aa1abbf576d6
+Thu Aug 20 03:15:21 AM UTC 2026
+----- ruff format --check -----
+27 files already formatted
+[PASS] ruff format --check
+----- ruff check -----
+All checks passed!
+[PASS] ruff check
+----- mypy -----
+Success: no issues found in 15 source files
+[PASS] mypy
+----- pytest -----
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /root/projects/doctor_helper/backend
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collected 70 items
+
+tests/unit/test_adr.py .........                                         [ 12%]
+tests/unit/test_config.py ......                                         [ 21%]
+tests/unit/test_fhir_pagination.py .......                               [ 31%]
+tests/unit/test_fhir_transport.py ....                                   [ 37%]
+tests/unit/test_health.py ...                                            [ 41%]
+tests/unit/test_medication.py .....                                      [ 48%]
+tests/unit/test_observation_normalize.py ........                        [ 60%]
+tests/unit/test_status_supersession.py .......                           [ 70%]
+tests/unit/test_temporal.py ............                                 [ 87%]
+tests/unit/test_units.py .........                                       [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /root/projects/doctor_helper/backend/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 70 passed, 1 warning in 0.28s =========================
+[PASS] pytest
+----- secret_scan -----
+secret_scan: no secrets detected
+[PASS] secret_scan
+----- ALL CHECKS PASSED -----
