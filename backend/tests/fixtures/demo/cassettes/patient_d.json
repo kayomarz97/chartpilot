@@ -1,4 +1,10 @@
 {
+  "_meta": {
+    "model_a_id": "gemini-3.7-flash",
+    "model_b_id": "gemini-3.5-flash",
+    "recorded_at": "2026-08-20",
+    "note": "hand-authored cassette consistent with the demo fixtures; not a live recording"
+  },
   "model_a": {
     "claims": [
       {
@@ -6,7 +12,10 @@
         "claim_type": "clinician_review_suggestion",
         "statement": "The patient has a confirmed severe sulfonamide antibiotic allergy on record and an active order for sulfamethoxazole-trimethoprim, a sulfonamide-containing combination antibiotic; a clinician may want to confirm this order is intentional.",
         "patient_evidence": [
-          { "resource_type": "MedicationRequest", "resource_id": "med-d-1" }
+          {
+            "resource_type": "MedicationRequest",
+            "resource_id": "med-d-1"
+          }
         ],
         "external_evidence": [],
         "severity": "moderate",

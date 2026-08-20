@@ -1,6 +1,19 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 16 COMPLETE (hermetic CI enforced). Proceeding to Phase 17.
+Step: pytest-socket 0.8.1; addopts "--disable-socket --allow-unix-socket -m 'not live'" (unix socket needed
+  for FastAPI TestClient asyncio self-pipe). make check PHASE=16 exit 0, 284 tests + 1 live deselected —
+  suite proven network-free. tests/live/ (marked live+enable_socket, skips w/o key; run via `make live-test`
+  = `cd backend && uv run pytest tests/live -m live`). Cassettes annotated _meta (model ids + 2026-08-20).
+  test_no_prose_assertions.py (AST scan, §23). NOTE: ambient shell GEMINI_API_KEY != our backend/.env key
+  (subagent flagged; ours is the isolated one).
+Next action: PHASE 17 — latency + eval. Instrument run_patient per-stage timing; scripts/measure_latency.py
+  (single-patient ≤90s p50/worst, LIVE — Opus runs); precomputed multi-patient run artifact (§50, hermetic);
+  scripts/measure_model_b_live.py (§22.3 Set M live catch/false-accept/false-reject — Opus runs); EVALUATION.md.
+  Then 18 (deploy — SHOW gcloud first), 19 (smoke), 20 (self-audit, no video).
+
+## Superseded status log
 Phase: 15 COMPLETE (adversarial suite). Proceeding to Phase 16.
 Step: tests/adversarial/ — §53 injection invariant (byte-equality, no exception clause: benign vs
   injection vs fabricated-fact note → identical deterministic projection; K rule fires identically at 6.2);

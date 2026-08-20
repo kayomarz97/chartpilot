@@ -1,4 +1,10 @@
 {
+  "_meta": {
+    "model_a_id": "gemini-3.7-flash",
+    "model_b_id": "gemini-3.5-flash",
+    "recorded_at": "2026-08-20",
+    "note": "hand-authored cassette consistent with the demo fixtures; not a live recording"
+  },
   "model_a": {
     "claims": [
       {
@@ -6,8 +12,14 @@
         "claim_type": "uncertainty",
         "statement": "The most recent potassium result was recorded in an unrecognized unit ('mEq') that could not be safely normalized to mmol/L, so it is unclear whether this value represents critical hyperkalemia despite the patient being on an active ACE inhibitor.",
         "patient_evidence": [
-          { "resource_type": "Observation", "resource_id": "obs-c-k1" },
-          { "resource_type": "MedicationRequest", "resource_id": "med-c-1" }
+          {
+            "resource_type": "Observation",
+            "resource_id": "obs-c-k1"
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "resource_id": "med-c-1"
+          }
         ],
         "external_evidence": [
           {

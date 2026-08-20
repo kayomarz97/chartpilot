@@ -1,4 +1,10 @@
 {
+  "_meta": {
+    "model_a_id": "gemini-3.7-flash",
+    "model_b_id": "gemini-3.5-flash",
+    "recorded_at": "2026-08-20",
+    "note": "hand-authored cassette consistent with the demo fixtures; not a live recording"
+  },
   "model_a": {
     "claims": [
       {
@@ -6,10 +12,22 @@
         "claim_type": "possible_concern",
         "statement": "The patient is on a combination of an ACE inhibitor, an aldosterone antagonist, and a potassium supplement, with a history of chronic kidney disease and a current potassium of 5.7 mmol/L already above the reference range, which together may increase the risk of hyperkalemia.",
         "patient_evidence": [
-          { "resource_type": "Observation", "resource_id": "obs-e-k1" },
-          { "resource_type": "MedicationRequest", "resource_id": "med-e-1" },
-          { "resource_type": "MedicationRequest", "resource_id": "med-e-2" },
-          { "resource_type": "MedicationRequest", "resource_id": "med-e-3" }
+          {
+            "resource_type": "Observation",
+            "resource_id": "obs-e-k1"
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "resource_id": "med-e-1"
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "resource_id": "med-e-2"
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "resource_id": "med-e-3"
+          }
         ],
         "external_evidence": [
           {

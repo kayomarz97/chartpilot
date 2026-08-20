@@ -1,4 +1,10 @@
 {
+  "_meta": {
+    "model_a_id": "gemini-3.7-flash",
+    "model_b_id": "gemini-3.5-flash",
+    "recorded_at": "2026-08-20",
+    "note": "hand-authored cassette consistent with the demo fixtures; not a live recording"
+  },
   "model_a": {
     "claims": [
       {
@@ -6,8 +12,14 @@
         "claim_type": "possible_concern",
         "statement": "The patient's potassium is critically elevated at 6.2 mmol/L while she is on an active ACE inhibitor (lisinopril), which may worsen hyperkalemia, especially given her chronic kidney disease and elevated creatinine.",
         "patient_evidence": [
-          { "resource_type": "Observation", "resource_id": "obs-a-k1" },
-          { "resource_type": "MedicationRequest", "resource_id": "med-a-1" }
+          {
+            "resource_type": "Observation",
+            "resource_id": "obs-a-k1"
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "resource_id": "med-a-1"
+          }
         ],
         "external_evidence": [
           {

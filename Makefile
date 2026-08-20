@@ -4,7 +4,7 @@ PHASE ?= $(shell cat .current_phase 2>/dev/null || echo 00)
 EVIDENCE_DIR := evidence
 EVIDENCE_FILE := $(EVIDENCE_DIR)/phase_$(PHASE).txt
 
-.PHONY: check refresh-evidence
+.PHONY: check refresh-evidence live-test
 
 check:
 	@mkdir -p $(EVIDENCE_DIR)
@@ -32,3 +32,10 @@ check:
 # never run as part of `make check` (which must stay hermetic).
 refresh-evidence:
 	( cd backend && uv run python ../scripts/refresh_evidence.py )
+
+# MANUAL ONLY -- runs the live Gemini e2e test (tests/live/, spec §23) against
+# the REAL API. Costs real tokens; needs GEMINI_API_KEY set in the
+# environment; never run as part of `make check`. See
+# backend/tests/live/README.md.
+live-test:
+	( cd backend && uv run pytest tests/live -m live )
