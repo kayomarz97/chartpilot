@@ -92,3 +92,13 @@ of the rule, flagged as such; if the hackathon committee reads it more strictly,
 ## TD-004 (proposed) — FHIR backend = local fixtures for demo, Cloud Healthcare path documented
 **Date:** 2026-08-20 · **Status:** PROPOSED (§49 Option B)
 Rationale: lowest demo risk; GCP-native Cloud Healthcare path documented and wired if time permits.
+
+---
+
+## TD-009 — Operating model: Sonnet subagents build, Opus verifies
+**Date:** 2026-08-20 · **Status:** LOCKED (user directive)
+Implementation is delegated to Sonnet subagents (Agent tool, `model: sonnet`); the Opus main session
+orchestrates, writes the brief, and INDEPENDENTLY verifies (re-runs `make check`, reads load-bearing files)
+before committing + tagging. Rationale: save Opus tokens while keeping Opus as architect/verifier. Honors
+SPEC §4 intent (Sonnet implements, Opus does architecture/verification) and logs the real model used per phase.
+Subagents must NOT commit/tag/push — Opus does that after verification.

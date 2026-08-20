@@ -1,17 +1,21 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
-Phase: 1 COMPLETE (tagged phase-00, phase-01). Ready to start Phase 2.
-Step: Repo live at github.com/kayomarz97/chartpilot (private); on branch `dev`; recovery tags pushed.
-Status: Phase 0+1 done; no application code yet (correct). Clean checkpoint at commit 29ba538.
-Last successful test: n/a (make check begins Phase 2)
-Next action: PHASE 2 — backend skeleton. Create backend/ (Python 3.11 + FastAPI), pyproject with pinned
-  deps, `GET /health` (200 only when required config present; non-200 otherwise), env-only config (no
-  hardcoded project/model/URL), Makefile `make check` (ruff format --check, ruff, mypy, pytest, secret-scan),
-  first unit test, evidence/phase_02.txt, tag phase-02. Run verifier before claiming done.
-Blocked on: nothing. Upcoming user inputs: Gemini API key needed by Phase 7 (goes in backend/.env, never
-  committed); GCP new-project creation needs user go-ahead on exact commands at Phase 11.
+Phase: 2 COMPLETE (backend skeleton). Ready to start Phase 3 (FHIR layer).
+Step: FastAPI skeleton on Python 3.11.14 (via uv); `make check PHASE=02` exits 0 (ruff/mypy/pytest/secret-scan).
+Status: Phase 0-2 done. About to tag phase-02.
+Last successful test: `make check PHASE=02` → exit 0, 9 unit tests pass (Opus re-ran independently).
+Next action: PHASE 3 — FHIR layer. Sonnet subagent builds a FHIR R4 client + Bundle pagination + Observation
+  normalizer (status/value[x]/units/referenceRange/interpretation/component) working over LOCAL fixtures
+  (§49 Option B, no Cloud Healthcare yet). Do FHIR-detail research first (§28A precision, pagination). Opus verifies.
+Blocked on: nothing. Upcoming user inputs: Gemini API key by Phase 7 (backend/.env, never committed);
+  GCP new-project go-ahead at Phase 11.
 Last updated: 2026-08-20
+
+## Operating model (per user directive 2026-08-20)
+Sonnet subagents BUILD (implementation); Opus (main session) ORCHESTRATES + independently VERIFIES
+(re-runs make check, reads key files) before committing/tagging. Saves tokens. Records real model used.
+Phase 2 built by Sonnet (general-purpose, model=sonnet); verified + committed by Opus. See TD-009.
 
 ## Continuation quick-ref (if session interrupted)
 Read SPEC.md + this journal + PLAN.md. `git tag -l 'phase-*'` → highest is phase-01. Branch `dev`.
