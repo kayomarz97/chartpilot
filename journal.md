@@ -1,15 +1,23 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
-Phase: 5 COMPLETE (ClinicalValidityEngine + abnormality precedence + K_HIGH_RISK_001). Building Phase 6 now.
-Step: app/validation/ (engine + eGFR/corrected-calcium/anion-gap) + app/rules/ (abnormality §29, potassium
-  rule, medication-class artifact). `make check PHASE=05` exit 0, 89 tests. Opus verified potassium.py +
-  metrics.py (K rule fail-closed correct; CKD-EPI 2021 formula correct, hand-checked ≈69 for the test case).
-Next action (in-progress this session): PHASE 6 — evidence layer (openFDA label adapter + SPL policy §14;
-  PubMed E-utilities cache §12A; immutable snapshots §19; tiny curated guideline pack PENDING §12; shared
-  throttle §24; per-run external-call budget §70). Hermetic tests via recorded fixtures (no live calls in CI).
-  Ping user after Phase 6.
+Phase: 6 COMPLETE. BATCH 4→6 DONE (user asked to run through 6, then ping). Pinged user.
+Step: app/evidence/ (errors, models, hashing, throttle, budget, openfda, pubmed, guideline_pack, snapshot)
+  + recorded fixtures + refresh_evidence.py + guideline-pack (PENDING placeholder) + REVIEW_QUEUE.md.
+  `make check PHASE=06` exit 0, 128 tests. Opus verified openfda.py (SPL policy flags ambiguity, no arbitrary
+  pick §14), snapshot.py (write-once immutability + caps §19), guideline placeholder (clearly a placeholder,
+  no fabricated citation §1.14). Subagent found+fixed a real float-precision infinite-loop in throttle.
+Next action: PHASE 7 — Gemini Model A (Interactions API, structured claims w/ verbatim spans, §40, TD-005/006).
+  ⚠️ NEEDS the user's GEMINI_API_KEY (goes in backend/.env, never committed). Also do config/models.yaml
+  discovery + pin (§8). Do a short Gemini SDK sanity re-check (google-genai version) before coding.
+Blocked on: GEMINI_API_KEY from user for Phase 7 live/health path (can build+cassette-test structure first).
 Prev "Current Status" (Phase 3) below is superseded.
+
+## Known refinements (non-blocking, scheduled)
+- snapshot.persist immutability check includes created_at, so rebuilding identical records at a different
+  time raises SnapshotImmutableError instead of a no-op. Errs safe. Refine at Phase 12 (exclude created_at
+  from the equality check, or derive created_at deterministically).
+- HttpFhirTransport still lacks a default real httpx http_get (Phase 11/18).
 
 ## Superseded status log
 Phase: 3 COMPLETE (FHIR read layer over local fixtures). Ready to start Phase 4 (normalizer/temporal).

@@ -1,0 +1,38 @@
+{
+  "results": [
+    {
+      "set_id": "dddd4444-0000-0000-0000-000000000004",
+      "id": "dddd4444-0000-0000-0000-000000000004-1",
+      "version": "1",
+      "effective_time": "20230601",
+      "openfda": {
+        "application_number": ["NDA020123"],
+        "brand_name": ["EXAMPLEDRUG A"],
+        "generic_name": ["EXAMPLE INGREDIENT"],
+        "product_type": ["HUMAN PRESCRIPTION DRUG"]
+      },
+      "indications_and_usage": ["Example indication A."],
+      "contraindications": ["Example contraindication A."],
+      "warnings": ["Example warning A."],
+      "boxed_warning": [],
+      "adverse_reactions": ["Example adverse reaction A."]
+    },
+    {
+      "set_id": "eeee5555-0000-0000-0000-000000000005",
+      "id": "eeee5555-0000-0000-0000-000000000005-1",
+      "version": "1",
+      "effective_time": "20230601",
+      "openfda": {
+        "application_number": ["NDA020456"],
+        "brand_name": ["EXAMPLEDRUG B"],
+        "generic_name": ["EXAMPLE INGREDIENT"],
+        "product_type": ["HUMAN PRESCRIPTION DRUG"]
+      },
+      "indications_and_usage": ["Example indication B."],
+      "contraindications": ["Example contraindication B."],
+      "warnings": ["Example warning B."],
+      "boxed_warning": [],
+      "adverse_reactions": ["Example adverse reaction B."]
+    }
+  ]
+}

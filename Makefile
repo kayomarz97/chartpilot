@@ -4,7 +4,7 @@ PHASE ?= $(shell cat .current_phase 2>/dev/null || echo 00)
 EVIDENCE_DIR := evidence
 EVIDENCE_FILE := $(EVIDENCE_DIR)/phase_$(PHASE).txt
 
-.PHONY: check
+.PHONY: check refresh-evidence
 
 check:
 	@mkdir -p $(EVIDENCE_DIR)
@@ -25,3 +25,8 @@ check:
 	  ( scripts/secret_scan.sh ) && echo "[PASS] secret_scan" || { echo "[FAIL] secret_scan"; exit 1; }; \
 	  echo "----- ALL CHECKS PASSED -----"; \
 	} 2>&1 | tee $(EVIDENCE_FILE)
+
+# MANUAL ONLY -- performs real network I/O against openFDA/PubMed and is
+# never run as part of `make check` (which must stay hermetic).
+refresh-evidence:
+	( cd backend && uv run python ../scripts/refresh_evidence.py )

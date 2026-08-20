@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "set_id": "aaaa1111-0000-0000-0000-000000000001",
+      "id": "aaaa1111-0000-0000-0000-000000000001-1",
+      "version": "1",
+      "effective_time": "20200101",
+      "openfda": {
+        "application_number": ["NDA009218"],
+        "brand_name": ["COUMADIN"],
+        "generic_name": ["WARFARIN SODIUM"],
+        "product_type": ["HUMAN PRESCRIPTION DRUG"]
+      },
+      "indications_and_usage": ["Warfarin sodium tablets are indicated for prophylaxis and treatment of venous thrombosis."],
+      "contraindications": ["Warfarin sodium is contraindicated in pregnancy."],
+      "warnings": ["Warfarin sodium can cause major or fatal bleeding."],
+      "boxed_warning": ["Bleeding risk."],
+      "adverse_reactions": ["Hemorrhage."]
+    },
+    {
+      "set_id": "bbbb2222-0000-0000-0000-000000000002",
+      "id": "bbbb2222-0000-0000-0000-000000000002-1",
+      "version": "3",
+      "effective_time": "20230115",
+      "openfda": {
+        "application_number": ["NDA009218"],
+        "brand_name": ["COUMADIN"],
+        "generic_name": ["WARFARIN SODIUM"],
+        "product_type": ["HUMAN PRESCRIPTION DRUG"]
+      },
+      "indications_and_usage": ["Warfarin sodium tablets are indicated for prophylaxis and treatment of venous thrombosis and pulmonary embolism (updated 2023)."],
+      "contraindications": ["Warfarin sodium is contraindicated in pregnancy, except in women with mechanical heart valves."],
+      "warnings": ["Warfarin sodium can cause major or fatal bleeding. Regular monitoring of INR is required."],
+      "boxed_warning": ["Bleeding risk. Regularly monitor INR in all treated patients."],
+      "adverse_reactions": ["Hemorrhage, necrosis, systemic cholesterol microembolization."]
+    },
+    {
+      "set_id": "cccc3333-0000-0000-0000-000000000003",
+      "id": "cccc3333-0000-0000-0000-000000000003-1",
+      "version": "2",
+      "effective_time": "20240601",
+      "openfda": {
+        "application_number": ["ANDA040603"],
+        "brand_name": ["WARFARIN SODIUM"],
+        "generic_name": ["WARFARIN SODIUM"],
+        "product_type": ["HUMAN PRESCRIPTION DRUG"]
+      },
+      "indications_and_usage": ["Generic warfarin sodium tablets, indicated for prophylaxis and treatment of thrombosis."],
+      "contraindications": ["Contraindicated in pregnancy."],
+      "warnings": ["Can cause major or fatal bleeding."],
+      "boxed_warning": ["Bleeding risk."],
+      "adverse_reactions": ["Hemorrhage."]
+    }
+  ]
+}
