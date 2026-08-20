@@ -1,14 +1,21 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
-Phase: 0 → 1 transition. Phase 0 COMPLETE (research + audit + questions answered + PLAN finalized).
-Step: About to start Phase 1 (local git init, initial commit, create private GitHub repo `chartpilot`, dev branch).
-Status: IN PROGRESS — no application code yet; SPEC.md + PLAN.md + all Phase 0 docs written.
-Last successful test: n/a (no code yet)
-Next action: Phase 1 — git init + Phase-0 commit; `gh repo create chartpilot --private`; create `dev` branch;
-  then Phase 2 backend skeleton (FastAPI + /health + env-only config).
-Blocked on: nothing (user gave go-ahead "continue"). GCP deep-dive research deferred to just-in-time (Phase 11).
+Phase: 1 COMPLETE (tagged phase-00, phase-01). Ready to start Phase 2.
+Step: Repo live at github.com/kayomarz97/chartpilot (private); on branch `dev`; recovery tags pushed.
+Status: Phase 0+1 done; no application code yet (correct). Clean checkpoint at commit 29ba538.
+Last successful test: n/a (make check begins Phase 2)
+Next action: PHASE 2 — backend skeleton. Create backend/ (Python 3.11 + FastAPI), pyproject with pinned
+  deps, `GET /health` (200 only when required config present; non-200 otherwise), env-only config (no
+  hardcoded project/model/URL), Makefile `make check` (ruff format --check, ruff, mypy, pytest, secret-scan),
+  first unit test, evidence/phase_02.txt, tag phase-02. Run verifier before claiming done.
+Blocked on: nothing. Upcoming user inputs: Gemini API key needed by Phase 7 (goes in backend/.env, never
+  committed); GCP new-project creation needs user go-ahead on exact commands at Phase 11.
 Last updated: 2026-08-20
+
+## Continuation quick-ref (if session interrupted)
+Read SPEC.md + this journal + PLAN.md. `git tag -l 'phase-*'` → highest is phase-01. Branch `dev`.
+Resume at "Next action" above (Phase 2). Do NOT restart. Account has hit session limits — checkpoint often.
 
 ## Hackathon facts (from official rules, retrieved 2026-08-20)
 - Event: **All Things Agentic Hackathon** (Devpost). **Deadline 2026-08-31 17:00 PDT** (~11 days).
