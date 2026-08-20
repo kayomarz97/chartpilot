@@ -1,6 +1,24 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 7 COMPLETE (Gemini Model A integration, hermetic). `make check PHASE=07` exit 0, 147 tests.
+Step: app/agent/ (protocol, models=Claim schema §40, claims parse fail-closed, toolcall §10 strict-match,
+  model_pin §8 loud-fail, prompts fixed system instruction, gemini.py real adapter). config/models.yaml
+  pinned (A=3.7-flash, B=3.5-flash). New make-check gate: no_sampling_params. google-genai==2.18.1 +
+  pyyaml added. Opus verified models.py/toolcall.py/check script; re-ran make check.
+Next action: PHASE 8 — deterministic citation checker (Gates 1-4: source retrieval, content hash, verbatim
+  SPAN verification w/ §17 normalization, metadata) over the evidence snapshot; model-emitted offsets
+  rejected; absent span REJECT; ambiguous multi-match FLAG_FOR_REVIEW; changed-snapshot invalidation.
+  Then Phase 9 (Model B), Phase 10 (safety gate). Continue via Sonnet subagents; Opus verifies.
+⚠️ AWAITING from user: GEMINI_API_KEY (backend/.env, gitignored) to run the LIVE Model-A health check +
+  resolve the Phase-7 VERIFY-LIVE flags (Model.name prefix; internal-submodule import; Interactions response
+  mapping). Everything hermetic works without it.
+
+## Known refinements (non-blocking, scheduled)
+- Phase-7 gemini.py imports Interaction/FunctionCallStep from private SDK paths (google.genai._gaos.types...)
+  — VERIFY-LIVE + re-check on SDK bump. Insulated by the GeminiClient Protocol. (was: Phase 6/HttpFhir notes below)
+
+## Superseded batch note
 Phase: 6 COMPLETE. BATCH 4→6 DONE (user asked to run through 6, then ping). Pinged user.
 Step: app/evidence/ (errors, models, hashing, throttle, budget, openfda, pubmed, guideline_pack, snapshot)
   + recorded fixtures + refresh_evidence.py + guideline-pack (PENDING placeholder) + REVIEW_QUEUE.md.

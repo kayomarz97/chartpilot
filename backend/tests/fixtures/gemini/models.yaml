@@ -1,0 +1,8 @@
+model_a_id: gemini-3.7-flash
+model_b_id: gemini-3.5-flash
+discovery_timestamp: "2026-08-20"
+provider: "Gemini Developer API (google-genai)"
+retrieval_date: "2026-08-20"
+rationale: >
+  Test fixture mirroring config/models.yaml, used to exercise
+  app.agent.model_pin without touching the real repo-root config file.

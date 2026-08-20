@@ -23,6 +23,8 @@ check:
 	  ( cd backend && uv run pytest tests ) && echo "[PASS] pytest" || { echo "[FAIL] pytest"; exit 1; }; \
 	  echo "----- secret_scan -----"; \
 	  ( scripts/secret_scan.sh ) && echo "[PASS] secret_scan" || { echo "[FAIL] secret_scan"; exit 1; }; \
+	  echo "----- no_sampling_params -----"; \
+	  ( scripts/check_no_sampling_params.sh ) && echo "[PASS] no_sampling_params" || { echo "[FAIL] no_sampling_params"; exit 1; }; \
 	  echo "----- ALL CHECKS PASSED -----"; \
 	} 2>&1 | tee $(EVIDENCE_FILE)
 

@@ -1,0 +1,13 @@
+# Discovered + pinned per SPEC §8. Live discovery-verification runs at startup
+# once GEMINI_API_KEY is present (verify_pinned_models). Discovery source:
+# research/gemini-notes.md (official docs, retrieved 2026-08-20).
+model_a_id: gemini-3.7-flash
+model_b_id: gemini-3.5-flash
+discovery_timestamp: "2026-08-20"
+provider: "Gemini Developer API (google-genai)"
+retrieval_date: "2026-08-20"
+rationale: >
+  Both GA/stable and >= Gemini 3.5 (hackathon requirement). Model A = 3.7-flash
+  (current flagship-flash); Model B = 3.5-flash (different model -> partial
+  independence for adversarial review). Single-vendor limitation disclosed
+  (TD-003). No GA Pro model exists at 3.x as of retrieval.

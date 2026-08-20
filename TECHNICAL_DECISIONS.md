@@ -62,13 +62,32 @@ per-vendor exception needed. Determinism via fixed system instructions + respons
 ---
 
 ## TD-005 — Gemini API surface = Interactions API, stateful mode
-**Date:** 2026-08-20 · **Status:** LOCKED (verified `research/gemini-notes.md` §2–4)
-Use `client.interactions.create(...)` (GA, recommended) over legacy `generate_content`. Structured output
-via `response_format={type,mime_type,schema=Pydantic.model_json_schema()}`. Multi-turn tool calling uses
-**stateful mode** (`store:true` + persist `previous_interaction_id` in Firestore) so Google's servers hold
-thought-signature history — clean fit for stateless Cloud Tasks workers (§9/§10). Function-result steps
-must match `id`/`name`/count of the preceding function_call steps exactly (Gemini 3.x strict matching) —
-regression test required (§10).
+**Date:** 2026-08-20 · **Status:** LOCKED (verified `research/gemini-notes.md` §2–4; implemented Phase 7)
+
+**Decision (the §9 API choice):** use the **Interactions API** (`client.interactions.create(...)`) over the
+legacy `generate_content` surface. Alternatives evaluated per §9:
+- *generate_content*: still supported, but Google now leads its own structured-output + function-calling
+  guides with Interactions; would mean owning thought-signature replay ourselves (§10) — more fragile.
+- *Interactions API (chosen)*: GA + recommended; native structured output (`response_format` w/ Pydantic
+  JSON schema); native tool orchestration; **stateful mode** (`store:true` + `previous_interaction_id`)
+  keeps thought signatures server-side — ideal for our **stateless Cloud Tasks workers** (§45): we persist
+  only the `previous_interaction_id` in our own durable state and never serialize opaque signature blobs.
+- *ADK / GenKit / Antigravity*: heavier agent runtimes that would fight our own Cloud Tasks state machine
+  (see TD-007); not adopted.
+
+**State ownership (§9):** application owns durable state (`run_id + patient_id` checkpoint, §45); the Gemini
+interaction is re-associated by storing its `interaction_id` alongside that checkpoint. Server-side
+interaction state is NOT used as a substitute for our durable state.
+
+**Implementation (Phase 7):** structured output via `response_format={type,mime_type,schema=...model_json_schema()}`;
+function-result steps must match `call_id`/`name`/count of the preceding function_call steps exactly (Gemini
+3.x strict matching) — enforced locally in `toolcall.assert_function_results_match` + regression-tested (§10).
+
+**Known fragility (flagged, Phase 7):** the real `app/agent/gemini.py` adapter currently imports
+`Interaction`/`FunctionCallStep` from internal SDK submodule paths (`google.genai._gaos.types...`) to dodge a
+static-analysis ambiguity, and has `# VERIFY-LIVE:` flags (e.g. whether `Model.name` is bare vs
+`models/`-prefixed). These must be re-verified against the live SDK when `GEMINI_API_KEY` is available, and
+on any `google-genai` version bump. Our pipeline is insulated from these by the `GeminiClient` Protocol.
 
 ## TD-006 — SDK pin: google-genai==2.18.1
 **Date:** 2026-08-20 · **Status:** LOCKED (re-verify on PyPI before demo day; SDK ships frequently)

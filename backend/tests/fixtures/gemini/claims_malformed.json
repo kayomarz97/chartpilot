@@ -1,0 +1,26 @@
+{
+  "claims": [
+    {
+      "claim_id": "claim-001",
+      "claim_type": "patient_specific_inference",
+      "statement": "The patient's most recent potassium value is above the reference range.",
+      "patient_evidence": [
+        {
+          "resource_type": "Observation",
+          "resource_id": "obs-potassium-1"
+        }
+      ],
+      "external_evidence": [
+        {
+          "evidence_id": "evidence-fda-label-1",
+          "verbatim_supporting_span": "Hyperkalemia has been reported with concomitant use of ACE inhibitors and potassium-sparing diuretics.",
+          "offset": 5
+        }
+      ],
+      "severity": "moderate",
+      "confidence": 0.72,
+      "rationale": "The observed potassium value exceeds the upper reference bound, and the cited label text describes hyperkalemia risk with this medication class, which suggests the finding may warrant clinician review.",
+      "recommended_action": "Consider reviewing the patient's medication list for potassium-sparing agents and repeating the potassium level."
+    }
+  ]
+}
