@@ -1,6 +1,14 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 8 COMPLETE (deterministic citation checker). BATCH 8→10 in progress (user: "run through 10").
+Step: app/citation/ (normalization §17, verifier Gates 1-4, offsets_still_valid §19). `make check PHASE=08`
+  exit 0, 167 tests. Opus verified verifier.py + normalization.py (fail-closed gates + shared norm pipeline).
+Next action (in-progress): PHASE 9 — Model B blinded adversarial reviewer (§21) + corruption suite Set D/M
+  (§22), hermetic via fake GeminiClient + cassettes; then PHASE 10 — final safety gate + claim verdicts +
+  patient status/stage state machine (§42/§43). Ping user after Phase 10.
+
+## Superseded status log
 Phase: 7 COMPLETE (Gemini Model A integration, hermetic). `make check PHASE=07` exit 0, 147 tests.
 Step: app/agent/ (protocol, models=Claim schema §40, claims parse fail-closed, toolcall §10 strict-match,
   model_pin §8 loud-fail, prompts fixed system instruction, gemini.py real adapter). config/models.yaml
