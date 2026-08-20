@@ -1,0 +1,119 @@
+{
+  "generated_note": "Precomputed from committed demo fixtures/cassettes (spec \u00a750) -- hermetic and deterministic, no network access at generation time. For instant UI rendering only; not a substitute for a live pipeline run.",
+  "patients": [
+    {
+      "error": null,
+      "findings": [
+        {
+          "claim_id": "claim-a-1",
+          "claim_type": "possible_concern",
+          "confidence": 0.85,
+          "model_b_finding": "supported",
+          "recommended_action": "Consider an urgent repeat potassium level and review of the ACE inhibitor given the renal history.",
+          "severity": "critical",
+          "statement": "The patient's potassium is critically elevated at 6.2 mmol/L while she is on an active ACE inhibitor (lisinopril), which may worsen hyperkalemia, especially given her chronic kidney disease and elevated creatinine.",
+          "verdict": "verified"
+        }
+      ],
+      "patient_id": "patient-a",
+      "stage": "persisted",
+      "status": "completed",
+      "timeline": [
+        "observation obs-a-creat1: effective='2026-08-18T09:00:00+00:00' status=final value=1.8 mg/dL",
+        "observation obs-a-k1: effective='2026-08-18T09:00:00+00:00' status=final value=6.2 mmol/L",
+        "medication med-a-1: authored_on='2025-09-01T00:00:00+00:00' status=active"
+      ]
+    },
+    {
+      "error": null,
+      "findings": [
+        {
+          "claim_id": "claim-b-1",
+          "claim_type": "patient_fact",
+          "confidence": 0.9,
+          "model_b_finding": "supported",
+          "recommended_action": null,
+          "severity": null,
+          "statement": "The patient's most recent potassium value (4.1 mmol/L, recorded 2026-08-15) is within the normal reference range; an earlier elevated value (6.3 mmol/L, recorded 2026-06-01) is no longer the current value.",
+          "verdict": "verified"
+        }
+      ],
+      "patient_id": "patient-b",
+      "stage": "persisted",
+      "status": "completed",
+      "timeline": [
+        "observation obs-b-k-new: effective='2026-08-15T08:00:00+00:00' status=final value=4.1 mmol/L",
+        "observation obs-b-k-old: effective='2026-06-01T08:00:00+00:00' status=final value=6.3 mmol/L",
+        "medication med-b-1: authored_on='2026-05-01T00:00:00+00:00' status=active"
+      ]
+    },
+    {
+      "error": null,
+      "findings": [
+        {
+          "claim_id": "claim-c-1",
+          "claim_type": "uncertainty",
+          "confidence": 0.4,
+          "model_b_finding": "insufficient_evidence",
+          "recommended_action": "Clarify the units on the reported potassium result and repeat the test if needed.",
+          "severity": null,
+          "statement": "The most recent potassium result was recorded in an unrecognized unit ('mEq') that could not be safely normalized to mmol/L, so it is unclear whether this value represents critical hyperkalemia despite the patient being on an active ACE inhibitor.",
+          "verdict": "requires_review"
+        }
+      ],
+      "patient_id": "patient-c",
+      "stage": "persisted",
+      "status": "flagged_for_review",
+      "timeline": [
+        "observation obs-c-k1: effective='2026-08-17T08:00:00+00:00' status=final value=6.1 mEq",
+        "medication med-c-1: authored_on='2026-02-01T00:00:00+00:00' status=active"
+      ]
+    },
+    {
+      "error": null,
+      "findings": [
+        {
+          "claim_id": "claim-d-1",
+          "claim_type": "clinician_review_suggestion",
+          "confidence": 0.6,
+          "model_b_finding": "supported",
+          "recommended_action": "Confirm whether the sulfamethoxazole-trimethoprim order is appropriate given the patient's recorded allergy history.",
+          "severity": "moderate",
+          "statement": "The patient has a confirmed severe sulfonamide antibiotic allergy on record and an active order for sulfamethoxazole-trimethoprim, a sulfonamide-containing combination antibiotic; a clinician may want to confirm this order is intentional.",
+          "verdict": "verified"
+        }
+      ],
+      "patient_id": "patient-d",
+      "stage": "persisted",
+      "status": "completed",
+      "timeline": [
+        "medication med-d-1: authored_on='2026-08-10T00:00:00+00:00' status=active"
+      ]
+    },
+    {
+      "error": null,
+      "findings": [
+        {
+          "claim_id": "claim-e-1",
+          "claim_type": "possible_concern",
+          "confidence": 0.8,
+          "model_b_finding": "supported",
+          "recommended_action": "Consider monitoring serum potassium closely and reviewing whether all three potassium-raising agents are necessary.",
+          "severity": "high",
+          "statement": "The patient is on a combination of an ACE inhibitor, an aldosterone antagonist, and a potassium supplement, with a history of chronic kidney disease and a current potassium of 5.7 mmol/L already above the reference range, which together may increase the risk of hyperkalemia.",
+          "verdict": "verified"
+        }
+      ],
+      "patient_id": "patient-e",
+      "stage": "persisted",
+      "status": "completed",
+      "timeline": [
+        "observation obs-e-k1: effective='2026-08-16T08:00:00+00:00' status=final value=5.7 mmol/L",
+        "medication med-e-1: authored_on='2025-12-01T00:00:00+00:00' status=active",
+        "medication med-e-2: authored_on='2025-12-01T00:00:00+00:00' status=active",
+        "medication med-e-3: authored_on='2026-06-15T00:00:00+00:00' status=active"
+      ]
+    }
+  ],
+  "run_id": "precomputed-demo-run"
+}

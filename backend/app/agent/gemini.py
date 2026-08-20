@@ -23,6 +23,7 @@ No `temperature`/`top_p`/`top_k` is ever set here -- see
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from google import genai
@@ -66,8 +67,17 @@ class GeminiInteractionsClient:
     literal in this module.
     """
 
-    def __init__(self, *, api_key: str, model_id: str) -> None:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model_id: str,
+        max_retries: int = 3,
+        retry_backoff_s: float = 2.0,
+    ) -> None:
         self._model_id = model_id
+        self._max_retries = max_retries
+        self._retry_backoff_s = retry_backoff_s
         # research/gemini-notes.md §2(a): Developer API client, explicit key.
         self._client = genai.Client(api_key=api_key)
 
@@ -127,14 +137,31 @@ class GeminiInteractionsClient:
                 "schema": response_schema,
             }
 
-        raw_result = self._client.interactions.create(
-            model=self._model_id,
-            input=input,
-            response_format=response_format,
-            tools=tools,
-            previous_interaction_id=previous_interaction_id,
-            store=store,
-        )
+        # Bounded retry around ONLY the raw SDK network call: transient
+        # 5xx/429/"high demand" errors from the SDK's internal error types
+        # (google.genai._gaos.*) are caught broadly here on purpose -- those
+        # exact exception classes are not a stable public import, so we
+        # cannot name them individually. Never retries the response-mapping/
+        # isinstance logic below -- only this call.
+        raw_result = None
+        for attempt in range(self._max_retries):
+            try:
+                raw_result = self._client.interactions.create(
+                    model=self._model_id,
+                    input=input,
+                    response_format=response_format,
+                    tools=tools,
+                    previous_interaction_id=previous_interaction_id,
+                    store=store,
+                )
+                break
+            except Exception as exc:  # noqa: BLE001
+                if attempt == self._max_retries - 1:
+                    raise AgentError(
+                        f"Gemini interactions.create failed after "
+                        f"{self._max_retries} attempts: {exc}"
+                    ) from exc
+                time.sleep(self._retry_backoff_s * 2**attempt)
 
         if not isinstance(raw_result, Interaction):
             # We never request stream=True, so this should be unreachable

@@ -26,12 +26,12 @@ categories (NUMERIC_MISMATCH, WRONG_DRUG, ...) directly against hand-built
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable
 from datetime import datetime
 from decimal import Decimal
 
 from app.agent.claims import generate_claims
-from app.agent.errors import StructuredOutputError
 from app.agent.models import Claim, ClaimType
 from app.agent.prompts import MODEL_A_SYSTEM_INSTRUCTION
 from app.agent.protocol import GeminiClient
@@ -50,7 +50,6 @@ from app.normalize.observation import latest_valid_observation, normalize_observ
 from app.normalize.units import NormalizedQuantity
 from app.pipeline.models import FindingResult, PatientRunResult, PatientRunSummary
 from app.review.deterministic import run_deterministic_layer
-from app.review.errors import ModelBOutputError
 from app.review.models import (
     AssertedMedication,
     AssertedObservationValue,
@@ -109,6 +108,7 @@ def run_patient(
     clock: Callable[[], datetime],
     repo: RunRepository | None = None,
     run_id: str = "demo-run",
+    stage_timings: dict[str, float] | None = None,
 ) -> PatientRunResult:
     """Run one patient through the full chained pipeline.
 
@@ -117,26 +117,40 @@ def run_patient(
     `InMemoryRunRepository` (hermetic, no external state) and `run_id`
     defaults to a stable constant, so a bare `run_patient(...)` call with
     only the documented keyword arguments still works end to end.
+
+    `stage_timings` (spec §50, Phase 17): when given a dict, this call
+    records the elapsed WALL-CLOCK seconds (measured with
+    `time.perf_counter` -- a monotonic clock for measurement, never a naive
+    `datetime`, and never used for any clinical timestamp) each
+    `app.gate.models.PatientStage` took, keyed by the stage's `.value`.
+    Defaults to `None`, in which case nothing is recorded and this call is
+    byte-for-byte the same as before this parameter existed -- zero
+    behavior change for every existing caller.
     """
     repository = repo if repo is not None else InMemoryRunRepository()
     now = clock()
+
+    _stage_start = time.perf_counter()
 
     # --- FETCHING ---
     try:
         resources = FhirClient(fhir_transport).fetch_all(patient_bundle_ref)
     except FhirError as exc:
+        _mark_stage(stage_timings, PatientStage.FETCHING, _stage_start)
         return _failed_result(
             patient_id=patient_bundle_ref, stage=PatientStage.FETCHING, error=str(exc)
         )
 
     patient_resource = next((r for r in resources if r.get("resourceType") == "Patient"), None)
     if patient_resource is None or not patient_resource.get("id"):
+        _mark_stage(stage_timings, PatientStage.FETCHING, _stage_start)
         return _failed_result(
             patient_id=patient_bundle_ref,
             stage=PatientStage.FETCHING,
             error="no Patient resource with an id found in the fetched bundle",
         )
     patient_id = str(patient_resource["id"])
+    _stage_start = _mark_stage(stage_timings, PatientStage.FETCHING, _stage_start)
 
     # --- NORMALIZING ---
     try:
@@ -150,6 +164,7 @@ def run_patient(
         ]
         adverse_reactions = normalize_adverse_reactions(resources)
     except Exception as exc:  # noqa: BLE001 -- fail closed, never silent "no findings"
+        _mark_stage(stage_timings, PatientStage.NORMALIZING, _stage_start)
         return _failed_result(patient_id=patient_id, stage=PatientStage.NORMALIZING, error=str(exc))
 
     patient_index = PatientFactIndex(
@@ -157,14 +172,17 @@ def run_patient(
         observations={obs.id: obs for obs in observations},
         medications={med.id: med for med in medications},
     )
+    _stage_start = _mark_stage(stage_timings, PatientStage.NORMALIZING, _stage_start)
 
     # --- RULES_EVALUATED ---
     k_result = evaluate_k_high_risk(
         observations, medications, config=k_config, med_classes=med_classes, evaluated_at=now
     )
     validity_results = _evaluate_validity_metrics(patient_resource, observations, now=now)
+    _stage_start = _mark_stage(stage_timings, PatientStage.RULES_EVALUATED, _stage_start)
 
     # --- EVIDENCE_RETRIEVAL --- (the passed-in `snapshot` only -- no live fetch)
+    _stage_start = _mark_stage(stage_timings, PatientStage.EVIDENCE_RETRIEVAL, _stage_start)
 
     # --- AI_REASONING ---
     user_input = _build_model_a_input(
@@ -179,35 +197,49 @@ def run_patient(
         claim_set = generate_claims(
             model_a, model_system_instruction=MODEL_A_SYSTEM_INSTRUCTION, user_input=user_input
         )
-    except StructuredOutputError as exc:
+    except Exception as exc:  # noqa: BLE001 -- fail closed, never a crash or silent "no findings"
+        _mark_stage(stage_timings, PatientStage.AI_REASONING, _stage_start)
         return _failed_result(
             patient_id=patient_id, stage=PatientStage.AI_REASONING, error=str(exc)
         )
+    _stage_start = _mark_stage(stage_timings, PatientStage.AI_REASONING, _stage_start)
 
     # --- CITATION_CHECK / INDEPENDENT_REVIEW / FINAL_VALIDATION (per claim) ---
     findings: list[FindingResult] = []
     claim_verdicts: list[ClaimVerdict] = []
     cited_evidence_ids: set[str] = set()
+    _citation_check_elapsed = 0.0
+    _independent_review_elapsed = 0.0
 
     for claim in claim_set.claims:
+        _claim_start = time.perf_counter()
         cur = _build_claim_under_review(
             claim, patient_index=patient_index, rule_results=(k_result,)
         )
         outcome = run_deterministic_layer(cur, snapshot=snapshot)
+        _citation_check_elapsed += time.perf_counter() - _claim_start
 
         model_b_verdict: ModelBVerdict | None = None
         if not outcome.blocked:
+            _review_start = time.perf_counter()
             packet = build_model_b_packet(
                 cur, snapshot=snapshot, citation_results=outcome.citation_results
             )
             try:
                 model_b_verdict = run_model_b(model_b, packet)
-            except ModelBOutputError as exc:
+            except Exception as exc:  # noqa: BLE001 -- fail closed, never a crash or silent "no findings"
+                _independent_review_elapsed += time.perf_counter() - _review_start
+                if stage_timings is not None:
+                    stage_timings[PatientStage.CITATION_CHECK.value] = _citation_check_elapsed
+                    stage_timings[PatientStage.INDEPENDENT_REVIEW.value] = (
+                        _independent_review_elapsed
+                    )
                 return _failed_result(
                     patient_id=patient_id,
                     stage=PatientStage.INDEPENDENT_REVIEW,
                     error=str(exc),
                 )
+            _independent_review_elapsed += time.perf_counter() - _review_start
 
         has_external_evidence = bool(claim.external_evidence)
         # `is_clinician_reviewed`'s `reviewed_by` concept is populated only by
@@ -244,6 +276,11 @@ def run_patient(
         )
         cited_evidence_ids.update(ref.evidence_id for ref in claim.external_evidence)
 
+    if stage_timings is not None:
+        stage_timings[PatientStage.CITATION_CHECK.value] = _citation_check_elapsed
+        stage_timings[PatientStage.INDEPENDENT_REVIEW.value] = _independent_review_elapsed
+    _stage_start = time.perf_counter()
+
     # --- FINAL_VALIDATION -> PERSISTED ---
     terminal_status = derive_patient_status(
         claim_verdicts, stage=PatientStage.PERSISTED, commit_status=CommitStatus.COMMITTED
@@ -268,9 +305,18 @@ def run_patient(
             terminal_status=terminal_status,
         )
     except StorageError as exc:
+        _mark_stage(stage_timings, PatientStage.FINAL_VALIDATION, _stage_start)
         return _failed_result(
             patient_id=patient_id, stage=PatientStage.FINAL_VALIDATION, error=str(exc)
         )
+    # `finalize_patient_result` performs both validating/writing the final
+    # artifacts (FINAL_VALIDATION) and flipping the terminal COMMITTED
+    # marker (PERSISTED) in one atomic call (see `app.storage.two_phase`) --
+    # there is no separate boundary to measure between the two, so the whole
+    # call's elapsed time is attributed to FINAL_VALIDATION and PERSISTED is
+    # recorded as the (near-instant) marker step immediately after it.
+    _stage_start = _mark_stage(stage_timings, PatientStage.FINAL_VALIDATION, _stage_start)
+    _mark_stage(stage_timings, PatientStage.PERSISTED, _stage_start)
 
     return PatientRunResult(
         patient_id=patient_id,
@@ -285,6 +331,17 @@ def run_patient(
         timeline_events=_build_timeline(patient_index),
         error=None,
     )
+
+
+def _mark_stage(stage_timings: dict[str, float] | None, stage: PatientStage, start: float) -> float:
+    """Record elapsed wall-seconds for `stage` since `start` into
+    `stage_timings` (a no-op when `None`) and return a fresh
+    `time.perf_counter()` reading to use as the next stage's `start`.
+    """
+    checkpoint = time.perf_counter()
+    if stage_timings is not None:
+        stage_timings[stage.value] = checkpoint - start
+    return checkpoint
 
 
 def _failed_result(*, patient_id: str, stage: PatientStage, error: str) -> PatientRunResult:

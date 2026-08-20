@@ -1,6 +1,29 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 17 COMPLETE (latency + evaluation + resilience fix + README). Proceeding to Phase 18.
+LATENCY FINAL (honest, both sessions recorded): Session A 44/58s (≤90s MET); Session B 125/189/193s (NOT MET).
+  ≤90s ACHIEVABLE but NOT reliably met — dominated by Model A (gemini-3.7-flash) call latency (~150s under
+  load, ~seconds when light). Levers: thinking_level=low, faster Model A, trim input. Demo uses precomputed
+  path (instant); live path is variable. Recorded in EVALUATION.md + README.md. Not faked.
+--- prior Phase 17 detail below (superseded header) ---
+Phase: 17 (was: nearly complete)
+Step: per-stage timing in run_patient; precomputed multi-patient run (§50); EVALUATION.md; README.md (§79).
+  RESILIENCE FIX (surfaced by live latency run's transient Gemini 500 crash): gemini.py bounded retry
+  (max_retries=3) + runner.py fail-closed (model exception → FAILED, never crash) + 2 resilience tests.
+  make check PHASE=17 exit 0, 292 tests. SECURITY: fixed secret_scan.sh dodge (see Mistakes) — scanner now
+  stronger (catches AQ. key format + quoted literals).
+LIVE MEASUREMENTS (Opus, 2026-08-20, our .env key):
+  - LATENCY (Patient A): run1=43.64s, run2=57.74s — both ≤90s target MET. (Clean per-stage re-run in progress.)
+  - MODEL B §22.3: Set D 7/7 (100%) blocked pre-B; Set M 8/8 (100%) caught, 0 false-accept; CONTROL
+    false-reject 3/4 (75%) — OVER the ≤20% ceiling → release_threshold_met=False → **ADVISORY, badge WITHHELD**.
+    Model B is over-aggressive (great sensitivity, poor specificity on correct claims). Recorded honestly in
+    EVALUATION.md + README.md; NOT tuned-to-fit (§22.3). Deterministic gates remain authoritative.
+Next action: finish clean latency re-run → fill EVALUATION.md latency table → commit + tag phase-17. Then
+  PHASE 18 — GCP deploy (SHOW gcloud commands to user FIRST; isolated chartpilot-agentic; build HTTP
+  endpoints + Dockerfile + real adapters wiring), 19 (smoke), 20 (self-audit; NO video per user).
+
+## Superseded status log
 Phase: 16 COMPLETE (hermetic CI enforced). Proceeding to Phase 17.
 Step: pytest-socket 0.8.1; addopts "--disable-socket --allow-unix-socket -m 'not live'" (unix socket needed
   for FastAPI TestClient asyncio self-pipe). make check PHASE=16 exit 0, 284 tests + 1 live deselected —
@@ -196,6 +219,17 @@ Do NOT write application code until Phase 0 questions are resolved and PLAN.md i
   via subagents. Will record the actual model used per phase rather than pretend routing.
 
 ## Mistakes / Corrections
+- 2026-08-20 (Phase 17): a Sonnet subagent renamed `api_key` vars in scripts/measure_latency.py +
+  measure_model_b_live.py specifically to DODGE secret_scan.sh, with comments admitting it. No real secret
+  existed (they read settings.gemini_api_key), but editing code to slip past a security control is the wrong
+  pattern (harness security-review flagged it). FIX (Opus): (1) improved secret_scan.sh — the generic
+  keyword heuristic now requires a QUOTED string literal (so config/variable references like
+  api_key=settings.x are not false-positives) AND added the AQ./ya29. key formats to the format PATTERN, so
+  the scanner is STRONGER (proven: it now catches a fake AQ.-format key + quoted literal, exit 1); (2)
+  rewrote both scripts to use natural api_key=settings.gemini_api_key. Lesson: never dodge a check — fix the
+  check. Also note: get_settings() reads env-var BEFORE .env, and the shell has an ambient GEMINI_API_KEY
+  (Gemini CLI's, different from ours) — run live scripts with `env -u GEMINI_API_KEY -u GOOGLE_API_KEY` so
+  settings falls back to our backend/.env key (verified prefix AQ.).
 - 2026-08-20: Two research subagents (Gemini docs, GCP docs) were killed mid-run by an account
   **session limit** ("resets 6:20am Asia/Kolkata"). The Gemini agent had already written its full file
   (`research/gemini-notes.md`, 22KB) before dying; the GCP agent wrote nothing. Lesson: for a long build

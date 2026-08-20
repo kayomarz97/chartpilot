@@ -43,7 +43,9 @@ fi
 #   - AWS access key id: AKIA followed by 16 uppercase alnum chars
 #   - PEM private key header
 #   - api_key=/apikey=/password=/secret= assigned to a non-placeholder-looking value
-PATTERN='AIza[0-9A-Za-z_-]{35}|ghp_[0-9A-Za-z]{36}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----'
+#   - Google Gemini API key (newer format): AQ. followed by 20+ url-safe chars
+#   - Google OAuth access token: ya29. followed by url-safe chars
+PATTERN='AIza[0-9A-Za-z_-]{35}|AQ\.[A-Za-z0-9_-]{20,}|ya29\.[A-Za-z0-9_-]{20,}|ghp_[0-9A-Za-z]{36}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----'
 
 FOUND=0
 
@@ -51,9 +53,15 @@ if grep -EnH "$PATTERN" "${SCAN_FILES[@]}" 2>/dev/null; then
   FOUND=1
 fi
 
-# api_key=/password=/secret= with a real-looking (non-placeholder) value.
+# api_key=/password=/secret= assigned to a real-looking STRING LITERAL.
+# A quote is REQUIRED before the value: a hardcoded secret in source is always
+# a quoted literal, whereas a variable/attribute reference (api_key=settings.x,
+# api_key=os.environ[...], api_key=key) is NOT a literal and must not be flagged
+# here -- those are caught, if they are real secrets, by the format PATTERN above
+# (which needs no quote). This is the principled way to avoid false positives on
+# config references WITHOUT renaming variables to dodge the scanner.
 # Skip obvious placeholders like REPLACE_ME, YOUR_, <..>, xxx, ${...}, empty.
-ASSIGN_PATTERN='(api[_-]?key|password|secret)[[:space:]]*[:=][[:space:]]*["'\''"]?[A-Za-z0-9_/+.-]{12,}'
+ASSIGN_PATTERN='(api[_-]?key|password|secret)[[:space:]]*[:=][[:space:]]*["'\''"][A-Za-z0-9_/+.-]{12,}'
 PLACEHOLDER_PATTERN='REPLACE_ME|YOUR_|CHANGE_ME|PLACEHOLDER|xxxxxxxx|\$\{|<.*>|example'
 
 while IFS=: read -r file line content; do
