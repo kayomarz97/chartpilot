@@ -1,0 +1,19 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [
+    { "relation": "self", "url": "page2.json" },
+    { "relation": "next", "url": "page3.json" }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Observation/obs-3",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-3",
+        "status": "final",
+        "code": { "text": "Temperature" }
+      }
+    }
+  ]
+}

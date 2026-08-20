@@ -1,0 +1,28 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [
+    { "relation": "self", "url": "page1.json" },
+    { "relation": "next", "url": "page2.json" }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Observation/obs-1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-1",
+        "status": "final",
+        "code": { "text": "Heart rate" }
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-2",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-2",
+        "status": "final",
+        "code": { "text": "Blood pressure" }
+      }
+    }
+  ]
+}

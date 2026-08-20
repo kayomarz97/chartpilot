@@ -1,0 +1,6 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": "this-should-be-a-list-not-a-string",
+  "entry": []
+}

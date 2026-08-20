@@ -1,0 +1,27 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [
+    { "relation": "self", "url": "page3.json" }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Observation/obs-4",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-4",
+        "status": "final",
+        "code": { "text": "Respiratory rate" }
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-5",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-5",
+        "status": "final",
+        "code": { "text": "Oxygen saturation" }
+      }
+    }
+  ]
+}

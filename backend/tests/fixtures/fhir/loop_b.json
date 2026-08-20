@@ -1,0 +1,19 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [
+    { "relation": "self", "url": "loop_b.json" },
+    { "relation": "next", "url": "loop_a.json" }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Observation/loop-obs-b",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "loop-obs-b",
+        "status": "final",
+        "code": { "text": "Loop page B observation" }
+      }
+    }
+  ]
+}

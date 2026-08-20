@@ -1,0 +1,26 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [
+    { "relation": "self", "url": "single.json" }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Patient/pat-1",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "pat-1",
+        "name": [{ "family": "Doe", "given": ["Jane"] }]
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-single-1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-single-1",
+        "status": "final",
+        "code": { "text": "Weight" }
+      }
+    }
+  ]
+}

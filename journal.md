@@ -1,16 +1,23 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
-Phase: 2 COMPLETE (backend skeleton). Ready to start Phase 3 (FHIR layer).
-Step: FastAPI skeleton on Python 3.11.14 (via uv); `make check PHASE=02` exits 0 (ruff/mypy/pytest/secret-scan).
-Status: Phase 0-2 done. About to tag phase-02.
-Last successful test: `make check PHASE=02` → exit 0, 9 unit tests pass (Opus re-ran independently).
-Next action: PHASE 3 — FHIR layer. Sonnet subagent builds a FHIR R4 client + Bundle pagination + Observation
-  normalizer (status/value[x]/units/referenceRange/interpretation/component) working over LOCAL fixtures
-  (§49 Option B, no Cloud Healthcare yet). Do FHIR-detail research first (§28A precision, pagination). Opus verifies.
+Phase: 3 COMPLETE (FHIR read layer over local fixtures). Ready to start Phase 4 (normalizer/temporal).
+Step: app/fhir/ (errors, transport, client). Loop-safe pagination + max_pages/max_resources + typed
+  fail-closed errors + retry/backoff (429/5xx) with no-retry-on-auth. `make check PHASE=03` exit 0, 20 tests.
+Status: Phase 0-3 done. About to tag phase-03.
+Last successful test: `make check PHASE=03` → exit 0, 20 tests (Opus re-ran + read client.py/transport.py).
+Next action: PHASE 4 — clinical data normalizer. Sonnet builds the Observation normalizer per SPEC §26/§27/§28
+  (§28A temporal + precision engine: tz-aware UTC internal, Asia/Kolkata display, precision enum,
+  INDETERMINATE_ORDER; UCUM units incl. creatinine mg/dL↔µmol/L; status/supersession latest-valid;
+  dataAbsentReason/interpretation/referenceRange/component round-trip; ADR representation §33;
+  MedicationRequest≠adherence §31). Opus designs the normalized model + verifies.
 Blocked on: nothing. Upcoming user inputs: Gemini API key by Phase 7 (backend/.env, never committed);
   GCP new-project go-ahead at Phase 11.
 Last updated: 2026-08-20
+
+## Known deferrals (documented, not dropped)
+- HttpFhirTransport has no default real httpx-backed `http_get` yet (injected/tested only). Wire the real
+  default when a live FHIR path is actually needed (~Phase 11/18). Local-first is correct for the demo (§49 Opt B).
 
 ## Operating model (per user directive 2026-08-20)
 Sonnet subagents BUILD (implementation); Opus (main session) ORCHESTRATES + independently VERIFIES
