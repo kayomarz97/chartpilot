@@ -1,0 +1,41 @@
+# Secrets & credentials — NEVER commit (CLAUDE.md rule 2, spec §13)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+service-account*.json
+gcp-*.json
+credentials*.json
+*-key.json
+
+# Evidence caches / snapshots (large, reproducible) — spec §12A / §19
+evidence/cache/
+evidence/snapshots/
+*.snapshot
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node / frontend
+node_modules/
+.next/
+out/
+.turbo/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local phase evidence is committed (spec §65) — do NOT ignore evidence/phase_*.txt
