@@ -1,6 +1,20 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 11 COMPLETE (durable orchestration logic, hermetic). Proceeding in order to Phase 12.
+Step: app/tasks/ (RunTask, ExecutionBudget/Counters, Checkpoint §45; CheckpointStore + TaskQueue +
+  AppointmentSource Protocols w/ in-memory fakes; orchestrator.process_patient idempotent/resumable/
+  budgeted §45/§46/§47; enqueue_run §48 zero-appts=success; tomorrow_ist §28A.2). `make check PHASE=11`
+  exit 0, 227 tests. Opus verified orchestrator.py. GCP project = chartpilot-agentic (#124294464754), billing on.
+Next action: GCP DOCS RESEARCH (deferred from Phase 0) → research/gcp-notes.md (Firestore Native + txn/batch
+  op limit for §45A; Cloud Run OIDC/timeout; Cloud Tasks dedup/retry/dead-letter; Cloud Scheduler cron
+  Asia/Kolkata; IAM least-priv; asia-south1 gaps). THEN Phase 12 — Firestore persistence: subcollections §44,
+  two-phase atomic finalization §45A (chunk >500-op writes), CommitStatus; hermetic via in-memory fake +
+  thin real google-cloud-firestore adapter (untested live, like gemini.py). Real DB/deploy = Phase 18.
+NOTE (refinement): orchestrator auto-completes a stage with no registered runner — Phase 14 wiring must
+  register all 9 stages; consider a strict mode later.
+
+## Superseded status log
 Phase: 10 COMPLETE. BATCH 8→10 DONE. Phases 0-10 all complete + tagged. Pinged user.
 Step: app/gate/ (claim_gate finalize_claim_verdict §42; patient_state derive_patient_status +
   assert_state_invariants §43). `make check PHASE=10` exit 0, 211 tests. Opus verified both (deterministic
