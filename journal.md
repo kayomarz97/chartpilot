@@ -1,15 +1,19 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
-Phase: 9 COMPLETE (Model B blinded reviewer + corruption suite). BATCH 8→10, Phase 10 next.
-Step: app/review/ (packet BLINDED §21, integrity + deterministic layer, reviewer, corruption Set D/M +
-  measure_suite + release_threshold_met §22). `make check PHASE=09` exit 0, 189 tests. Opus verified
-  packet.py (no A rationale/confidence; full region) + corruption.py (Set D pre-B blocking; Set M recomputes
-  hash so only Model B catches; §22.3 gate). Model B measured live later (Phase 17/EVALUATION).
-Next action (in-progress): PHASE 10 — final safety gate: claim verdicts §42 (VERIFIED requires ALL
-  deterministic gates pass + Model B accept + non-PENDING evidence; disagreement -> REQUIRES_REVIEW),
-  patient status/stage orthogonal state machine §43 (COMPLETED requires PERSISTED + COMMITTED; PARTIAL not
-  COMPLETED). Then ping user (batch 8→10 done).
+Phase: 10 COMPLETE. BATCH 8→10 DONE. Phases 0-10 all complete + tagged. Pinged user.
+Step: app/gate/ (claim_gate finalize_claim_verdict §42; patient_state derive_patient_status +
+  assert_state_invariants §43). `make check PHASE=10` exit 0, 211 tests. Opus verified both (deterministic
+  fail can never be VERIFIED; COMPLETED requires PERSISTED+COMMITTED).
+MILESTONE: Phases 0-10 = the complete reasoning+safety "brain" (FHIR read → normalize → validity/rules →
+  evidence → Model A → citation gates → Model B → final safety gate). All deterministic/hermetic; 211 tests.
+Next action: PHASE 11 — durable orchestration (Cloud Scheduler → Cloud Run /enqueue → Cloud Tasks →
+  /tasks/process-patient → Firestore checkpoints; idempotency; retry/dead-letter; §45/§45B/§46/§47).
+  ⚠️ NEEDS: GCP research (deferred from Phase 0) + the new isolated GCP project (chartpilot-agentic) created
+  by the user + billing. Do GCP docs research FIRST, then show all gcloud commands before running (TD-002).
+  Phases 12 (Firestore), 13 (frontend), 14 (demo fixtures), 15 (adversarial), 16 (hermetic), 17 (latency +
+  LIVE Model-B measurement), 18 (deploy), 19 (smoke), 20 (self-audit) remain.
+Pending user items: (1) create GCP project + billing before Phase 11; (2) rotate the Gemini key post-build.
 
 ## Superseded status log
 Phase: 7 COMPLETE (Gemini Model A integration, hermetic). `make check PHASE=07` exit 0, 147 tests.
