@@ -1,0 +1,38 @@
+{
+  "model_a": {
+    "claims": [
+      {
+        "claim_id": "claim-e-1",
+        "claim_type": "possible_concern",
+        "statement": "The patient is on a combination of an ACE inhibitor, an aldosterone antagonist, and a potassium supplement, with a history of chronic kidney disease and a current potassium of 5.7 mmol/L already above the reference range, which together may increase the risk of hyperkalemia.",
+        "patient_evidence": [
+          { "resource_type": "Observation", "resource_id": "obs-e-k1" },
+          { "resource_type": "MedicationRequest", "resource_id": "med-e-1" },
+          { "resource_type": "MedicationRequest", "resource_id": "med-e-2" },
+          { "resource_type": "MedicationRequest", "resource_id": "med-e-3" }
+        ],
+        "external_evidence": [
+          {
+            "evidence_id": "pubmed:42618199",
+            "verbatim_supporting_span": "may increase the risk of hyperkalemia (HK)"
+          }
+        ],
+        "severity": "high",
+        "confidence": 0.8,
+        "rationale": "The cited literature describes an increased risk of hyperkalemia with renin-angiotensin-aldosterone system inhibitor combinations, which is consistent with this patient's active ACE inhibitor, aldosterone antagonist, and potassium supplement together with an already-elevated potassium value.",
+        "recommended_action": "Consider monitoring serum potassium closely and reviewing whether all three potassium-raising agents are necessary."
+      }
+    ]
+  },
+  "model_b": [
+    {
+      "claim_id": "claim-e-1",
+      "verdict": {
+        "finding": "supported",
+        "should_reject": false,
+        "rationale": "The cited literature region directly supports an association between RAAS-inhibitor-class combinations and hyperkalemia risk, the patient facts match the chart, and no disqualifying context is present.",
+        "suggested_safer_wording": null
+      }
+    }
+  ]
+}

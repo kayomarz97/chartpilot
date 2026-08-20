@@ -1,0 +1,36 @@
+{
+  "model_a": {
+    "claims": [
+      {
+        "claim_id": "claim-c-1",
+        "claim_type": "uncertainty",
+        "statement": "The most recent potassium result was recorded in an unrecognized unit ('mEq') that could not be safely normalized to mmol/L, so it is unclear whether this value represents critical hyperkalemia despite the patient being on an active ACE inhibitor.",
+        "patient_evidence": [
+          { "resource_type": "Observation", "resource_id": "obs-c-k1" },
+          { "resource_type": "MedicationRequest", "resource_id": "med-c-1" }
+        ],
+        "external_evidence": [
+          {
+            "evidence_id": "openfda:e81a8aca-0e7c-4a02-b596-09e4ac22c70e:adverse_reactions",
+            "verbatim_supporting_span": "Hyperkalemia [see Warnings and Precautions (5.6) ]"
+          }
+        ],
+        "severity": null,
+        "confidence": 0.4,
+        "rationale": "The observation's unit could not be converted to the canonical mmol/L unit, so the value cannot be reliably compared against the critical hyperkalemia threshold even though the patient is on a potassium-raising medication.",
+        "recommended_action": "Clarify the units on the reported potassium result and repeat the test if needed."
+      }
+    ]
+  },
+  "model_b": [
+    {
+      "claim_id": "claim-c-1",
+      "verdict": {
+        "finding": "insufficient_evidence",
+        "should_reject": true,
+        "rationale": "The unit ambiguity on the underlying observation means this claim's own reasoning about clinical significance cannot be independently confirmed from the given facts alone; a human should clarify the unit before this is treated as a confident finding.",
+        "suggested_safer_wording": "The unit on this potassium result should be clarified before drawing any conclusion about hyperkalemia risk."
+      }
+    }
+  ]
+}

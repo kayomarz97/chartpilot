@@ -1,0 +1,65 @@
+"""Result models for the Phase 14 end-to-end pipeline.
+
+`PatientRunResult` is what `app.pipeline.runner.run_patient` returns: the
+full outcome of chaining FHIR fetch through normalization, rule evaluation,
+evidence retrieval, AI reasoning, citation checking, independent review,
+final gating, and persistence for ONE patient. A `FindingResult` bundles one
+claim with everything decided about it (its final `ClaimVerdict`, the
+citation results for its external evidence, and Model B's verdict, if one
+was run).
+"""
+
+from __future__ import annotations
+
+from pydantic import BaseModel, ConfigDict
+
+from app.agent.models import Claim
+from app.citation.models import CitationResult
+from app.gate.models import ClaimVerdict, CommitStatus, PatientStage, PatientStatus
+from app.review.models import ModelBVerdict
+from app.rules.models import RuleResult
+from app.validation.models import ValidityResult
+
+__all__ = ["FindingResult", "PatientRunSummary", "PatientRunResult"]
+
+
+class FindingResult(BaseModel):
+    """One claim plus its full downstream disposition."""
+
+    model_config = ConfigDict(frozen=True)
+
+    claim: Claim
+    verdict: ClaimVerdict
+    citation_results: tuple[CitationResult, ...]
+    model_b_verdict: ModelBVerdict | None
+
+
+class PatientRunSummary(BaseModel):
+    """The terminal run-state for one patient (spec §43)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    status: PatientStatus
+    stage: PatientStage
+    commit_status: CommitStatus
+
+
+class PatientRunResult(BaseModel):
+    """The full outcome of running one patient through the pipeline.
+
+    `error` is `None` on any non-FAILED outcome (including a legitimately
+    empty-findings COMPLETED run) and is always set alongside
+    `summary.status == PatientStatus.FAILED` -- a failure is never silent
+    (spec: "a FHIR/normalize error -> the run ends FAILED, never silently
+    'no findings'").
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    patient_id: str
+    summary: PatientRunSummary
+    findings: tuple[FindingResult, ...]
+    rule_results: tuple[RuleResult, ...]
+    validity_results: tuple[ValidityResult, ...]
+    timeline_events: tuple[str, ...]
+    error: str | None = None

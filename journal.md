@@ -1,6 +1,23 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 14 COMPLETE (demo fixtures + end-to-end pipeline + LIVE Gemini verified). Proceeding to Phase 15.
+Step: app/pipeline/runner.py chains all phases (FETCHING→…→PERSISTED, fail-closed). 5 demo patients A-E
+  (FHIR fixtures). Demo evidence FETCHED REAL (one-time): openFDA lisinopril was AMBIGUOUS (68 tied labels,
+  no NDA) → select_label correctly raised LabelSelectionAmbiguous on live data → used enalapril (same ACE
+  class); real PubMed PMID 42618199. Snapshot ebe894943f90727b. Cassettes cite real spans. `make check
+  PHASE=14` exit 0, 255 tests. Opus verified runner.py + re-ran make check.
+MILESTONE — FIRST LIVE END-TO-END (Opus ran real Gemini A=3.7-flash/B=3.5-flash on Patient A):
+  status=flagged_for_review/persisted/committed, 6 findings. Patient facts VERIFIED; critical-hyperkalemia
+  POSSIBLE_CONCERN VERIFIED with a REAL pubmed verified_span + Model B supported; a review-suggestion where
+  Model B DISAGREED (insufficient_evidence) → REQUIRES_REVIEW (routed to human, not averaged); a
+  PENDING-guideline claim → PARTIALLY_VERIFIED. Everything per spec on real models. VERIFY-LIVE #2 (Interactions
+  API response mapping in gemini.py) RESOLVED — real calls work. VERIFY-LIVE #1 already resolved (Phase 7).
+Next action: PHASE 15 — adversarial suite: §53 prompt-injection invariant (byte-equal deterministic verdict
+  with/without injected free-text notes, no exception clause); fabricated resource/value/citation rejected;
+  §13 source conflict; §67 high-priority coverage map. Hermetic. Then 16, 17, 18 (deploy — show gcloud), 19, 20 (no video).
+
+## Superseded status log
 Phase: 13 COMPLETE (frontend UI). Proceeding in order to Phase 14.
 Step: frontend/ Next.js 15.5.23 + React 19.2.8 + TS strict, CSS design tokens (dark M3-inspired), typed mock
   data layer (5 demo patients incl. FLAGGED/COMPLETED-no-findings/FAILED/DEAD_LETTER). EvidenceDrawer §58

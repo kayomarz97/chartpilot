@@ -1,0 +1,31 @@
+{
+  "model_a": {
+    "claims": [
+      {
+        "claim_id": "claim-b-1",
+        "claim_type": "patient_fact",
+        "statement": "The patient's most recent potassium value (4.1 mmol/L, recorded 2026-08-15) is within the normal reference range; an earlier elevated value (6.3 mmol/L, recorded 2026-06-01) is no longer the current value.",
+        "patient_evidence": [
+          { "resource_type": "Observation", "resource_id": "obs-b-k-new" },
+          { "resource_type": "Observation", "resource_id": "obs-b-k-old" }
+        ],
+        "external_evidence": [],
+        "severity": null,
+        "confidence": 0.9,
+        "rationale": "The chart's most recent potassium observation post-dates the earlier elevated value and falls within the stated reference range, so the current potassium status is normal.",
+        "recommended_action": null
+      }
+    ]
+  },
+  "model_b": [
+    {
+      "claim_id": "claim-b-1",
+      "verdict": {
+        "finding": "supported",
+        "should_reject": false,
+        "rationale": "The timeline context confirms the cited normal value is the most recent, so the claim's framing is accurate and not misleading.",
+        "suggested_safer_wording": null
+      }
+    }
+  ]
+}

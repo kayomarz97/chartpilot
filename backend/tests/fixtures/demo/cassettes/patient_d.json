@@ -1,0 +1,30 @@
+{
+  "model_a": {
+    "claims": [
+      {
+        "claim_id": "claim-d-1",
+        "claim_type": "clinician_review_suggestion",
+        "statement": "The patient has a confirmed severe sulfonamide antibiotic allergy on record and an active order for sulfamethoxazole-trimethoprim, a sulfonamide-containing combination antibiotic; a clinician may want to confirm this order is intentional.",
+        "patient_evidence": [
+          { "resource_type": "MedicationRequest", "resource_id": "med-d-1" }
+        ],
+        "external_evidence": [],
+        "severity": "moderate",
+        "confidence": 0.6,
+        "rationale": "The active medication order's display text names a sulfonamide-containing combination antibiotic, which may warrant a clinician's attention alongside the patient's recorded drug allergy history.",
+        "recommended_action": "Confirm whether the sulfamethoxazole-trimethoprim order is appropriate given the patient's recorded allergy history."
+      }
+    ]
+  },
+  "model_b": [
+    {
+      "claim_id": "claim-d-1",
+      "verdict": {
+        "finding": "supported",
+        "should_reject": false,
+        "rationale": "The patient facts confirm the cited medication order is active and its display text matches the claim's description; this is a reasonable procedural suggestion, not an assertion requiring external evidence.",
+        "suggested_safer_wording": null
+      }
+    }
+  ]
+}

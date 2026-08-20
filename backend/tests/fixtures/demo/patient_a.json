@@ -1,0 +1,79 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [{ "relation": "self", "url": "patient_a.json" }],
+  "entry": [
+    {
+      "fullUrl": "Patient/patient-a",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-a",
+        "name": [{ "family": "Alvarez", "given": ["Rosa"] }],
+        "gender": "female",
+        "birthDate": "1950-04-12"
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-a-k1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-a-k1",
+        "status": "final",
+        "code": {
+          "coding": [
+            { "system": "http://loinc.org", "code": "2823-3", "display": "Potassium [Moles/volume] in Serum or Plasma" }
+          ],
+          "text": "Potassium"
+        },
+        "subject": { "reference": "Patient/patient-a" },
+        "effectiveDateTime": "2026-08-18T09:00:00+00:00",
+        "issued": "2026-08-18T09:20:00+00:00",
+        "valueQuantity": { "value": 6.2, "unit": "mmol/L", "system": "http://unitsofmeasure.org", "code": "mmol/L" },
+        "referenceRange": [{ "low": { "value": 3.5, "unit": "mmol/L" }, "high": { "value": 5.1, "unit": "mmol/L" } }]
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-a-creat1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-a-creat1",
+        "status": "final",
+        "code": {
+          "coding": [
+            { "system": "http://loinc.org", "code": "2160-0", "display": "Creatinine [Mass/volume] in Serum or Plasma" }
+          ],
+          "text": "Creatinine"
+        },
+        "subject": { "reference": "Patient/patient-a" },
+        "effectiveDateTime": "2026-08-18T09:00:00+00:00",
+        "issued": "2026-08-18T09:20:00+00:00",
+        "valueQuantity": { "value": 1.8, "unit": "mg/dL", "system": "http://unitsofmeasure.org", "code": "mg/dL" },
+        "referenceRange": [{ "low": { "value": 0.6, "unit": "mg/dL" }, "high": { "value": 1.3, "unit": "mg/dL" } }]
+      }
+    },
+    {
+      "fullUrl": "Condition/cond-a-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-a-1",
+        "clinicalStatus": { "coding": [{ "code": "active" }] },
+        "verificationStatus": { "coding": [{ "code": "confirmed" }] },
+        "code": { "text": "Chronic kidney disease, stage 3" },
+        "subject": { "reference": "Patient/patient-a" },
+        "recordedDate": "2025-11-02"
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/med-a-1",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-a-1",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": { "text": "Lisinopril 10 MG Oral Tablet" },
+        "subject": { "reference": "Patient/patient-a" },
+        "authoredOn": "2025-09-01T00:00:00+00:00"
+      }
+    }
+  ]
+}
