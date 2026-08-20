@@ -17,7 +17,6 @@ from typing import Any
 
 import pytest
 
-from app.agent.protocol import InteractionResult
 from app.fhir.transport import LocalFixtureTransport
 from app.gate.models import ClaimVerdict, PatientStatus
 from app.pipeline.demo_evidence import load_demo_snapshot
@@ -25,50 +24,11 @@ from app.pipeline.models import PatientRunResult
 from app.pipeline.runner import run_patient
 from app.rules.models import Severity
 from app.storage.inmemory import InMemoryRunRepository
+from tests.support.fake_gemini import FakeGeminiClient
 
 _DEMO_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "demo"
 _CASSETTES_DIR = _DEMO_DIR / "cassettes"
 _NOW = datetime(2026, 8, 20, 12, 0, 0, tzinfo=UTC)
-
-
-class FakeGeminiClient:
-    """Deterministic, hermetic `GeminiClient` fake driven by cassette responses.
-
-    `responses` is an ordered list of `(needle, output_text)` pairs; `create`
-    returns the `output_text` of the FIRST pair whose `needle` is a substring
-    of this call's serialized `input`. There is no fallback/default response:
-    an unmatched call raises `AssertionError` rather than silently returning
-    something that could mask a wiring bug in the pipeline under test.
-    """
-
-    def __init__(self, responses: list[tuple[str, str]]) -> None:
-        self._responses = responses
-        self.calls: list[str] = []
-
-    def list_models(self) -> list[str]:
-        return []
-
-    def create(
-        self,
-        *,
-        input: Any,
-        response_schema: dict[str, Any] | None = None,
-        tools: list[dict[str, Any]] | None = None,
-        previous_interaction_id: str | None = None,
-        store: bool = True,
-    ) -> InteractionResult:
-        self.calls.append(input)
-        for needle, output_text in self._responses:
-            if needle in input:
-                return InteractionResult(
-                    interaction_id=f"interaction-{len(self.calls)}",
-                    output_text=output_text,
-                    function_calls=(),
-                )
-        raise AssertionError(
-            f"FakeGeminiClient: no cassette response matched call #{len(self.calls)} "
-            f"input (first 300 chars): {input[:300]!r}"
-        )
 
 
 def _load_cassette(patient_key: str) -> dict[str, Any]:

@@ -1,6 +1,18 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 15 COMPLETE (adversarial suite). Proceeding to Phase 16.
+Step: tests/adversarial/ — §53 injection invariant (byte-equality, no exception clause: benign vs
+  injection vs fabricated-fact note → identical deterministic projection; K rule fires identically at 6.2);
+  fabricated resource/value/citation → REJECTED; §13 stale/conflict → REQUIRES_REVIEW; §67 coverage ledger
+  (greps referenced tests so a stale ref fails build). tests/support/fake_gemini.py shared. `make check
+  PHASE=15` exit 0, 278 tests. Opus verified the injection test is genuine byte-equality.
+Next action: PHASE 16 — hermetic CI: prove make check makes ZERO live/network calls (pytest-socket disable);
+  @pytest.mark.live layer excluded by default (addopts -m "not live") in tests/live/; cassettes annotated
+  with model id + retrieval date; no test asserts exact model prose. Then 17 (latency + live Model-B
+  metrics + EVALUATION.md), 18 (deploy — show gcloud first), 19 (smoke), 20 (self-audit, no video).
+
+## Superseded status log
 Phase: 14 COMPLETE (demo fixtures + end-to-end pipeline + LIVE Gemini verified). Proceeding to Phase 15.
 Step: app/pipeline/runner.py chains all phases (FETCHING→…→PERSISTED, fail-closed). 5 demo patients A-E
   (FHIR fixtures). Demo evidence FETCHED REAL (one-time): openFDA lisinopril was AMBIGUOUS (68 tied labels,
