@@ -1,6 +1,19 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 12 COMPLETE (Firestore persistence + §45A two-phase, hermetic). Proceeding in order to Phase 13.
+Step: app/storage/ (PatientSummary §44 compact; chunk_documents ≤400 [Firestore 500/commit limit];
+  RunRepository Protocol + InMemory fake w/ fault-injection + thin real google-cloud-firestore adapter
+  VERIFY-LIVE; two_phase.finalize_patient_result §45A). infra/firestore.rules deny-by-default §73.
+  `make check PHASE=12` exit 0, 243 tests. google-cloud-firestore==2.28.1. Opus verified two_phase.py + rules.
+GCP research DONE → research/gcp-notes.md (Firestore 500/commit; asia-south1 has all infra; Gemini Dev API
+  is global so region caveat N/A). Playbook pointer in .claude/PLAYBOOK.md.
+Next action: PHASE 13 — frontend (Next.js dark Material-3 UI + evidence drawer §58 + timeline §59) against a
+  typed MOCK data layer (real API wiring Phase 18/19); a11y §57A (axe zero critical/serious + reduced-motion +
+  keyboard); FAILED/DEAD_LETTER render distinct from "no high-priority findings" §60; production build passes.
+  Then 14 (demo fixtures + real end-to-end), 15-17, 18 (deploy — show gcloud first), 19, 20.
+
+## Superseded status log
 Phase: 11 COMPLETE (durable orchestration logic, hermetic). Proceeding in order to Phase 12.
 Step: app/tasks/ (RunTask, ExecutionBudget/Counters, Checkpoint §45; CheckpointStore + TaskQueue +
   AppointmentSource Protocols w/ in-memory fakes; orchestrator.process_patient idempotent/resumable/

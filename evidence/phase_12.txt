@@ -1,0 +1,75 @@
+12
+a8d663cbf842cc91323c3da68c0597e46a0c0b2a
+Thu Aug 20 01:13:29 PM UTC 2026
+----- ruff format --check -----
+119 files already formatted
+[PASS] ruff format --check
+----- ruff check -----
+All checks passed!
+[PASS] ruff check
+----- mypy -----
+Success: no issues found in 77 source files
+[PASS] mypy
+----- pytest -----
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /root/projects/doctor_helper/backend
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collected 243 items
+
+tests/unit/test_abnormality.py ....                                      [  1%]
+tests/unit/test_adr.py .........                                         [  5%]
+tests/unit/test_agent_claims.py .......                                  [  8%]
+tests/unit/test_agent_model_pin.py .....                                 [ 10%]
+tests/unit/test_agent_toolcall.py ......                                 [ 12%]
+tests/unit/test_appointments.py .....                                    [ 14%]
+tests/unit/test_chunking.py ......                                       [ 17%]
+tests/unit/test_citation_normalization.py ..........                     [ 21%]
+tests/unit/test_citation_verifier.py ..........                          [ 25%]
+tests/unit/test_claim_gate.py .......                                    [ 28%]
+tests/unit/test_config.py ......                                         [ 30%]
+tests/unit/test_corruption_suite.py .......                              [ 33%]
+tests/unit/test_enqueue.py ..                                            [ 34%]
+tests/unit/test_evidence_budget.py .....                                 [ 36%]
+tests/unit/test_evidence_snapshot.py .........                           [ 40%]
+tests/unit/test_evidence_throttle.py .....                               [ 42%]
+tests/unit/test_fhir_pagination.py .......                               [ 45%]
+tests/unit/test_fhir_transport.py ....                                   [ 46%]
+tests/unit/test_guideline_pack.py ......                                 [ 49%]
+tests/unit/test_health.py ...                                            [ 50%]
+tests/unit/test_medication.py .....                                      [ 52%]
+tests/unit/test_no_sampling_params.py .                                  [ 53%]
+tests/unit/test_observation_normalize.py ........                        [ 56%]
+tests/unit/test_openfda.py ......                                        [ 58%]
+tests/unit/test_orchestrator.py ......                                   [ 61%]
+tests/unit/test_patient_state.py ...............                         [ 67%]
+tests/unit/test_potassium_rule.py .....                                  [ 69%]
+tests/unit/test_pubmed.py ........                                       [ 72%]
+tests/unit/test_review_integrity.py .......                              [ 75%]
+tests/unit/test_review_packet.py ...                                     [ 76%]
+tests/unit/test_review_reviewer.py .....                                 [ 79%]
+tests/unit/test_status_supersession.py .......                           [ 81%]
+tests/unit/test_storage_subcollections.py .....                          [ 83%]
+tests/unit/test_task_queue.py ...                                        [ 85%]
+tests/unit/test_temporal.py ............                                 [ 90%]
+tests/unit/test_two_phase.py .....                                       [ 92%]
+tests/unit/test_units.py .........                                       [ 95%]
+tests/unit/test_validity_engine.py ...                                   [ 97%]
+tests/unit/test_validity_metrics.py .......                              [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /root/projects/doctor_helper/backend/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 243 passed, 1 warning in 0.79s ========================
+[PASS] pytest
+----- secret_scan -----
+secret_scan: no secrets detected
+[PASS] secret_scan
+----- no_sampling_params -----
+check_no_sampling_params: no sampling-parameter usage found
+[PASS] no_sampling_params
+----- ALL CHECKS PASSED -----

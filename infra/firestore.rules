@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// ChartPilot Firestore Security Rules -- spec §73 ("no open/test rules").
+//
+// DENY BY DEFAULT. These rules block every direct client (mobile/web SDK, REST,
+// or any caller authenticating as an end-user) read and write to every path in
+// this database. There is no exception carved out for `runs/*` or its
+// `claims`/`evidence` subcollections.
+//
+// Why deny everything:
+//   - The backend worker (Cloud Run, Phase 18) reads/writes Firestore via the
+//     **Admin SDK** (`google.cloud.firestore.Client`, see
+//     `backend/app/storage/firestore_repo.py`), authenticated as a dedicated
+//     service account with `roles/datastore.user`. The Admin SDK connects with
+//     elevated server credentials and **bypasses these Security Rules entirely** --
+//     that is a property of how the Admin SDK authenticates, not something these
+//     rules grant or could grant.
+//   - The browser/frontend must NEVER read `runs/{run_id}/patients/{patient_id}`,
+//     its `claims` subcollection, or its `evidence` subcollection directly from
+//     Firestore. All patient run results are served exclusively through the
+//     authenticated backend API (Phase 13), which applies its own auth/authz
+//     checks before returning anything. A client-side Firestore read of clinical
+//     data would bypass that layer entirely -- hence deny-by-default here, with
+//     no per-collection carve-out.
+//
+// Deferred to Phase 18/19: exercising these rules against the Firestore Rules
+// Emulator (`firebase emulators:start --only firestore`) to prove empirically
+// that an unauthenticated/end-user client is rejected on every path shape used
+// by this app. That requires the emulator toolchain, which is out of scope for
+// this hermetic Phase 12 change. The Phase-12 deliverable is this rules file
+// (deny-by-default, no exceptions) plus the data-model separation documented
+// above (Admin-SDK-only backend access, API-mediated client access).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
