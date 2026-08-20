@@ -1,0 +1,193 @@
+/* ChartPilot design tokens — dark clinical theme, Material-3-Expressive-inspired.
+   No proprietary Google/Pixel assets are used; this is an original token set. */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --surface-0: #0b0d10; /* app background */
+  --surface-1: #14171c; /* header / footer */
+  --surface-2: #1b1f26; /* cards */
+  --surface-3: #232833; /* raised cards, drawer */
+  --surface-4: #2b3140; /* hover / active */
+  --outline: #3a4152;
+  --outline-strong: #545e73;
+
+  /* Text */
+  --on-surface: #eef1f6;
+  --on-surface-variant: #b8c0d0;
+  --on-surface-muted: #8b93a6;
+
+  /* Brand */
+  --primary: #7fb1ff;
+  --primary-strong: #a9c9ff;
+  --on-primary: #06192f;
+
+  /* Semantic — severity / status. Each pairs a dark fill with light text,
+     chosen for >=4.5:1 contrast, and is never the only signal (icon+text
+     always accompany color). */
+  --critical-bg: #5c1418;
+  --critical-fg: #ffd9d9;
+  --critical-border: #9c2c33;
+
+  --high-bg: #5a2c0d;
+  --high-fg: #ffdbb8;
+  --high-border: #a1520f;
+
+  --moderate-bg: #55420a;
+  --moderate-fg: #ffe9a8;
+  --moderate-border: #967307;
+
+  --low-bg: #123255;
+  --low-fg: #cfe3ff;
+  --low-border: #2f5f95;
+
+  --info-bg: #262c38;
+  --info-fg: #d6dceb;
+  --info-border: #4a5266;
+
+  --verified-bg: #103a20;
+  --verified-fg: #b8f2ce;
+  --verified-border: #1f7a44;
+
+  --review-bg: #2e2461;
+  --review-fg: #dcd3ff;
+  --review-border: #5c47b8;
+
+  --rejected-bg: #4a1620;
+  --rejected-fg: #ffc9d4;
+  --rejected-border: #8c2b3d;
+
+  --failed-bg: #3a1414;
+  --failed-fg: #f0b8b8;
+  --failed-border: #6b2626;
+
+  --queued-bg: #22262f;
+  --queued-fg: #c8ceda;
+  --queued-border: #454c5c;
+
+  /* Radii + elevation, expressive but restrained */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
+
+  --focus-ring: #7fb1ff;
+
+  --motion-fast: 120ms;
+  --motion-base: 220ms;
+  --motion-slow: 320ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--on-surface);
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 650;
+  line-height: 1.25;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--primary-strong);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Reduced-motion-aware transitions used across components */
+.transition-standard {
+  transition-duration: var(--motion-base);
+  transition-timing-function: var(--easing-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible focus outline everywhere, including custom components */
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  z-index: 100;
+  transition: top var(--motion-fast) var(--easing-standard);
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}

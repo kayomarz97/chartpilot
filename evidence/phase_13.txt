@@ -1,0 +1,71 @@
+13
+af5a780426f16177497a7a360a0ca4d75aedf194
+Thu Aug 20 01:27:41 PM UTC 2026
+----- versions -----
+next@15.5.23
+react@19.2.8
+react-dom@19.2.8
+typescript@5.9.3
+vitest@4.1.11
+@testing-library/react@16.3.2
+jest-axe@11.0.0
+----- pnpm run build (Next.js production build) -----
+> frontend@1.0.0 build /root/projects/doctor_helper/frontend
+> next build
+
+   ▲ Next.js 15.5.23
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 6.0s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/9) ...
+   Generating static pages (2/9)
+   Generating static pages (4/9)
+   Generating static pages (6/9)
+ ✓ Generating static pages (9/9)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                      507 B         106 kB
+├ ○ /_not-found                            123 B         102 kB
+└ ● /patients/[id]                       5.91 kB         112 kB
+    ├ /patients/MRN-48213
+    ├ /patients/MRN-51907
+    ├ /patients/MRN-60335
+    └ [+2 more paths]
++ First Load JS shared by all             102 kB
+  ├ chunks/3466f3f1-c96f853f58dc03ee.js  54.2 kB
+  ├ chunks/706-669b7b2d1b550351.js       46.1 kB
+  └ other shared chunks (total)          1.94 kB
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+
+BUILD_EXIT=0
+[PASS] pnpm run build (Next.js production build, exit 0, all 5 patient routes + dashboard statically generated)
+----- pnpm exec vitest run --reporter=verbose (vitest + jest-axe a11y suite) -----
+ RUN  v4.1.11 /root/projects/doctor_helper/frontend
+
+ ✓ tests/a11y.test.tsx > accessibility (axe) > dashboard has zero serious/critical violations 348ms
+ ✓ tests/a11y.test.tsx > accessibility (axe) > flagged patient view has zero serious/critical violations 220ms
+ ✓ tests/a11y.test.tsx > accessibility (axe) > open evidence drawer has zero serious/critical violations 477ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  18:59:01
+   Duration  2.67s (transform 335ms, setup 215ms, import 503ms, tests 1.05s, environment 746ms)
+
+TEST_EXIT=0
+[PASS] pnpm test — 3/3 axe checks passed, ZERO serious/critical violations
+  (Dashboard page, the FLAGGED_FOR_REVIEW patient view (Aarav Sharma), and the
+   open EvidenceDrawer dialog were each scanned with axe-core via jest-axe.)
+----- pnpm run lint (tsc --noEmit, strict TypeScript) -----
+[PASS] no type errors
+----- manual content spot-check on built HTML -----
+Priya Nair (COMPLETED, 0 findings)  -> renders "No high-priority findings identified"
+Meera Iyer (FAILED)                 -> renders "Processing error — manual review required" (ErrorState)
+Sanjay Rao (DEAD_LETTER)            -> renders "Processing failed permanently — manual review required" (ErrorState)
+Forbidden-language scan across all patient pages + dashboard for
+  "all clear" / "ruled out" / "no risk" / "cleared" / "is safe" -> none found

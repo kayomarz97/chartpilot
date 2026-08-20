@@ -1,0 +1,65 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid transparent;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.critical {
+  background: var(--critical-bg);
+  color: var(--critical-fg);
+  border-color: var(--critical-border);
+}
+.high {
+  background: var(--high-bg);
+  color: var(--high-fg);
+  border-color: var(--high-border);
+}
+.moderate {
+  background: var(--moderate-bg);
+  color: var(--moderate-fg);
+  border-color: var(--moderate-border);
+}
+.low {
+  background: var(--low-bg);
+  color: var(--low-fg);
+  border-color: var(--low-border);
+}
+.info {
+  background: var(--info-bg);
+  color: var(--info-fg);
+  border-color: var(--info-border);
+}
+.verified {
+  background: var(--verified-bg);
+  color: var(--verified-fg);
+  border-color: var(--verified-border);
+}
+.review {
+  background: var(--review-bg);
+  color: var(--review-fg);
+  border-color: var(--review-border);
+}
+.rejected {
+  background: var(--rejected-bg);
+  color: var(--rejected-fg);
+  border-color: var(--rejected-border);
+}
+.failed {
+  background: var(--failed-bg);
+  color: var(--failed-fg);
+  border-color: var(--failed-border);
+}
+.queued {
+  background: var(--queued-bg);
+  color: var(--queued-fg);
+  border-color: var(--queued-border);
+}

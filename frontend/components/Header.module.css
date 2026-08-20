@@ -1,0 +1,58 @@
+.header {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--outline);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 0;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(155deg, #7fb1ff, #4f7fd6);
+  color: #06192f;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.brandName {
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.brandTag {
+  color: var(--on-surface-muted);
+  font-size: 0.85rem;
+}
+
+.banner {
+  background: var(--info-bg);
+  color: var(--info-fg);
+  border-top: 1px solid var(--info-border);
+}
+
+.bannerInner {
+  padding: 0.55rem 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

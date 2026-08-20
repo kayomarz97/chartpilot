@@ -1,0 +1,14 @@
+.footer {
+  border-top: 1px solid var(--outline);
+  background: var(--surface-1);
+  margin-top: 3rem;
+}
+
+.inner {
+  padding: 1.5rem 0;
+  color: var(--on-surface-muted);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}

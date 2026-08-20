@@ -1,6 +1,20 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 13 COMPLETE (frontend UI). Proceeding in order to Phase 14.
+Step: frontend/ Next.js 15.5.23 + React 19.2.8 + TS strict, CSS design tokens (dark M3-inspired), typed mock
+  data layer (5 demo patients incl. FLAGGED/COMPLETED-no-findings/FAILED/DEAD_LETTER). EvidenceDrawer §58
+  showpiece (focus-trapped dialog, all provenance fields). Timeline §59. FAILED/DEAD_LETTER distinct from
+  EmptyState §60. a11y §57A: vitest+jest-axe 3/3 pass, ZERO serious/critical; prefers-reduced-motion honored.
+  GATE: `pnpm run build` exit 0 (5 routes SSG) + a11y pass. evidence/phase_13.txt. Opus re-ran build+a11y,
+  read EvidenceDrawer.tsx. NOTE: frontend gate is pnpm build + a11y (NOT the Python make check).
+Next action: PHASE 14 — demo fixtures (hand-authored FHIR bundles for patients A–E §51) + wire the full
+  pipeline end-to-end (Phase 4-12) into a runnable local run, exercising LIVE Gemini Model A+B (resolves the
+  last VERIFY-LIVE #2: Interactions.create response mapping). Deterministic fixture outputs. Feeds real data
+  to the frontend (replace mock). Then 15 (adversarial), 16 (hermetic CI), 17 (latency + live Model-B metrics),
+  18 (GCP deploy — show gcloud first), 19 (smoke), 20 (self-audit + demo video).
+
+## Superseded status log
 Phase: 12 COMPLETE (Firestore persistence + §45A two-phase, hermetic). Proceeding in order to Phase 13.
 Step: app/storage/ (PatientSummary §44 compact; chunk_documents ≤400 [Firestore 500/commit limit];
   RunRepository Protocol + InMemory fake w/ fault-injection + thin real google-cloud-firestore adapter

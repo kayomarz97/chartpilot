@@ -1,0 +1,43 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.75rem 2rem;
+  background: var(--failed-bg);
+  border: 2px solid var(--failed-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.icon {
+  width: 30px;
+  height: 30px;
+  color: var(--failed-fg);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 1.2rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--failed-fg);
+}
+
+.body {
+  max-width: 62ch;
+  color: var(--on-surface);
+  font-size: 0.95rem;
+}
+
+.meta {
+  color: var(--on-surface-muted);
+  font-size: 0.82rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
