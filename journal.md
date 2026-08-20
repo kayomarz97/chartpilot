@@ -1,12 +1,15 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
-Phase: 8 COMPLETE (deterministic citation checker). BATCH 8→10 in progress (user: "run through 10").
-Step: app/citation/ (normalization §17, verifier Gates 1-4, offsets_still_valid §19). `make check PHASE=08`
-  exit 0, 167 tests. Opus verified verifier.py + normalization.py (fail-closed gates + shared norm pipeline).
-Next action (in-progress): PHASE 9 — Model B blinded adversarial reviewer (§21) + corruption suite Set D/M
-  (§22), hermetic via fake GeminiClient + cassettes; then PHASE 10 — final safety gate + claim verdicts +
-  patient status/stage state machine (§42/§43). Ping user after Phase 10.
+Phase: 9 COMPLETE (Model B blinded reviewer + corruption suite). BATCH 8→10, Phase 10 next.
+Step: app/review/ (packet BLINDED §21, integrity + deterministic layer, reviewer, corruption Set D/M +
+  measure_suite + release_threshold_met §22). `make check PHASE=09` exit 0, 189 tests. Opus verified
+  packet.py (no A rationale/confidence; full region) + corruption.py (Set D pre-B blocking; Set M recomputes
+  hash so only Model B catches; §22.3 gate). Model B measured live later (Phase 17/EVALUATION).
+Next action (in-progress): PHASE 10 — final safety gate: claim verdicts §42 (VERIFIED requires ALL
+  deterministic gates pass + Model B accept + non-PENDING evidence; disagreement -> REQUIRES_REVIEW),
+  patient status/stage orthogonal state machine §43 (COMPLETED requires PERSISTED + COMMITTED; PARTIAL not
+  COMPLETED). Then ping user (batch 8→10 done).
 
 ## Superseded status log
 Phase: 7 COMPLETE (Gemini Model A integration, hermetic). `make check PHASE=07` exit 0, 147 tests.

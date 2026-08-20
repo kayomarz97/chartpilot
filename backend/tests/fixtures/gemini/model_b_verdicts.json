@@ -1,0 +1,62 @@
+{
+  "supported": {
+    "finding": "supported",
+    "should_reject": false,
+    "rationale": "The cited evidence region directly supports the statement, the patient facts match the chart, and no disqualifying context, population mismatch, or staleness is present.",
+    "suggested_safer_wording": null
+  },
+  "overstated_recommendation": {
+    "finding": "overstated",
+    "should_reject": true,
+    "rationale": "The claim asserts an absolute guarantee of safety with no risk, but the cited evidence only describes a reported association -- it does not support certainty language.",
+    "suggested_safer_wording": "This finding may warrant clinician review; it does not establish an absolute guarantee of safety."
+  },
+  "span_attached_to_unrelated_claim": {
+    "finding": "contradicted",
+    "should_reject": true,
+    "rationale": "The cited evidence span concerns a lab-value/medication interaction, not immunization status; the citation does not support this statement at all.",
+    "suggested_safer_wording": null
+  },
+  "wrong_population": {
+    "finding": "wrong_population",
+    "should_reject": true,
+    "rationale": "The cited evidence region does not describe pediatric or infant dosing; applying it to that population is not supported by the source text.",
+    "suggested_safer_wording": null
+  },
+  "contradicted_by_later_passage": {
+    "finding": "contradicted",
+    "should_reject": true,
+    "rationale": "A later passage in the same cited evidence region explicitly contradicts the finding the claim relies on.",
+    "suggested_safer_wording": null
+  },
+  "wrong_jurisdiction": {
+    "finding": "wrong_jurisdiction",
+    "should_reject": true,
+    "rationale": "The cited record's jurisdiction does not match the regulatory context the claim implies.",
+    "suggested_safer_wording": null
+  },
+  "stale_source": {
+    "finding": "stale_source",
+    "should_reject": true,
+    "rationale": "The cited record's publication date is well outside a reasonable currency window for this kind of clinical claim.",
+    "suggested_safer_wording": null
+  },
+  "temporal_misleading": {
+    "finding": "temporal_issue",
+    "should_reject": true,
+    "rationale": "The timeline context shows this value is not actually the patient's most current status, contrary to how the claim frames it.",
+    "suggested_safer_wording": null
+  },
+  "omitted_disqualifying_context": {
+    "finding": "omitted_context",
+    "should_reject": true,
+    "rationale": "The cited evidence region contains a nearby exception for a specific patient subgroup that the claim's citation ignores.",
+    "suggested_safer_wording": null
+  },
+  "verdict_malformed": {
+    "finding": "supported",
+    "should_reject": false,
+    "rationale": "This verdict payload carries an unexpected field and must fail closed.",
+    "not_a_real_field": "this should never validate"
+  }
+}
