@@ -44,6 +44,19 @@ from google.genai._gaos.types.interactions.interaction import Interaction
 from app.agent.errors import AgentError
 from app.agent.protocol import FunctionCall, InteractionResult
 
+_MODELS_PREFIX = "models/"
+
+
+def _bare_model_id(name: str) -> str:
+    """Strip the SDK's ``models/`` resource-name prefix to the bare API id.
+
+    Confirmed LIVE (2026-08-20): ``client.models.list()`` returns names like
+    ``"models/gemini-3.7-flash"``, while ``config/models.yaml`` pins the bare
+    id (``"gemini-3.7-flash"``). Normalizing here lets
+    ``app.agent.model_pin.verify_pinned_models`` compare like-for-like.
+    """
+    return name[len(_MODELS_PREFIX) :] if name.startswith(_MODELS_PREFIX) else name
+
 
 class GeminiInteractionsClient:
     """Adapts `google.genai.Client` (Interactions API) to `GeminiClient`.
@@ -64,13 +77,17 @@ class GeminiInteractionsClient:
         `google.genai.types.Model.name` is confirmed `Optional[str]` by the
         installed SDK's own type definitions; entries with no name are
         skipped (they cannot match any pinned model id).
-        # VERIFY-LIVE: confirm against a real response that `.name` holds
-        # the bare API id used in `model=` (e.g. "gemini-3.7-flash") and not
-        # a "models/gemini-3.7-flash"-prefixed resource name -- if it is
-        # prefixed, `app.agent.model_pin.verify_pinned_models` will need a
-        # prefix-stripping adjustment.
+
+        Confirmed LIVE (2026-08-20): `.name` is the `"models/"`-prefixed
+        resource name (e.g. `"models/gemini-3.7-flash"`), so we normalize it
+        to the bare id here via `_bare_model_id` to match the pinned ids in
+        `config/models.yaml`.
         """
-        return [model.name for model in self._client.models.list() if model.name is not None]
+        return [
+            _bare_model_id(model.name)
+            for model in self._client.models.list()
+            if model.name is not None
+        ]
 
     def create(
         self,

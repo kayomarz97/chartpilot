@@ -10,9 +10,14 @@ Next action: PHASE 8 — deterministic citation checker (Gates 1-4: source retri
   SPAN verification w/ §17 normalization, metadata) over the evidence snapshot; model-emitted offsets
   rejected; absent span REJECT; ambiguous multi-match FLAG_FOR_REVIEW; changed-snapshot invalidation.
   Then Phase 9 (Model B), Phase 10 (safety gate). Continue via Sonnet subagents; Opus verifies.
-⚠️ AWAITING from user: GEMINI_API_KEY (backend/.env, gitignored) to run the LIVE Model-A health check +
-  resolve the Phase-7 VERIFY-LIVE flags (Model.name prefix; internal-submodule import; Interactions response
-  mapping). Everything hermetic works without it.
+GEMINI KEY: RECEIVED + LIVE-VERIFIED (2026-08-20). Key is in backend/.env (gitignored, newer AQ.… format,
+  len 53 — authenticates fine). Live `client.models.list()` returns 50 models incl. both pins. VERIFY-LIVE #1
+  RESOLVED: names ARE `models/`-prefixed → fixed gemini.py `list_models()` to strip prefix; live
+  `verify_pinned_models` now PASSES. VERIFY-LIVE #2 (internal-submodule import) still stands for SDK bumps.
+  Interactions.create response mapping NOT yet live-exercised (only models.list was) — do a tiny live claims
+  call at Phase 14/17. Added backend/tests/conftest.py so tests ignore the local .env (hermeticity).
+  ⚠️ ENV HAZARD: /root/.bashrc exports ambient GOOGLE_API_KEY (Iatronix's) — our explicit api_key overrides
+  it (verified). Never call genai.Client() without explicit api_key. See TD-002. Recommend key rotation later.
 
 ## Known refinements (non-blocking, scheduled)
 - Phase-7 gemini.py imports Interaction/FunctionCallStep from private SDK paths (google.genai._gaos.types...)

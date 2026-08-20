@@ -39,6 +39,19 @@ projects — `iatronix-med-search-v1` (Iatronix-Med-Search, **currently the acti
 
 **Consequences:** Slightly more ceremony per command; total isolation of billing, quota, IAM, and data.
 
+**Environmental hazard found (2026-08-20):** the VPS `/root/.bashrc` globally exports the user's other
+API keys — including `GOOGLE_API_KEY` (an `AIza…` key, Iatronix's) and an ambient `GEMINI_API_KEY`.
+`google-genai` auto-reads `GOOGLE_API_KEY` from the environment, so a naive `genai.Client()` locally would
+use Iatronix's key/quota — an isolation breach. Mitigation (verified live): our `app/agent/gemini.py`
+always constructs `genai.Client(api_key=settings.gemini_api_key)` with the EXPLICIT key, and a live test
+confirmed the explicit key overrides the ambient `GOOGLE_API_KEY` (bogus ambient key + explicit our-key →
+success). Cloud Run has no `.bashrc`, so production is unaffected. Rule: never call `genai.Client()`
+without an explicit `api_key`; never set `GOOGLE_API_KEY` in our app's environment.
+
+**Live key note:** the user's Gemini key uses the newer `AQ.…` format (len 53), not the classic `AIza…`.
+It authenticates fine (`models.list()` returns both pinned models). Key is in gitignored `backend/.env`.
+Recommend rotating it after the build since it was pasted into the session transcript.
+
 ---
 
 ## TD-003 — Model A and Model B are BOTH Gemini (hackathon rule); different model IDs for partial independence
