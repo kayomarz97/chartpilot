@@ -1,11 +1,14 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
-Phase: 4 COMPLETE (clinical normalizer + temporal engine). Running straight through to Phase 6 (user directive).
-Step: app/normalize/ (temporal, units, models, observation, adr, medication, errors). `make check PHASE=04`
-  exit 0, 70 tests. Opus re-ran + read temporal.py/units.py deeply (interval ordering + Decimal conversions correct).
-Next action (in-progress this session): PHASE 5 — ClinicalValidityEngine + K_HIGH_RISK_001 + eGFR validity;
-  then PHASE 6 — evidence layer (openFDA + PubMed cache + snapshots + guideline pack). Ping user after Phase 6.
+Phase: 5 COMPLETE (ClinicalValidityEngine + abnormality precedence + K_HIGH_RISK_001). Building Phase 6 now.
+Step: app/validation/ (engine + eGFR/corrected-calcium/anion-gap) + app/rules/ (abnormality §29, potassium
+  rule, medication-class artifact). `make check PHASE=05` exit 0, 89 tests. Opus verified potassium.py +
+  metrics.py (K rule fail-closed correct; CKD-EPI 2021 formula correct, hand-checked ≈69 for the test case).
+Next action (in-progress this session): PHASE 6 — evidence layer (openFDA label adapter + SPL policy §14;
+  PubMed E-utilities cache §12A; immutable snapshots §19; tiny curated guideline pack PENDING §12; shared
+  throttle §24; per-run external-call budget §70). Hermetic tests via recorded fixtures (no live calls in CI).
+  Ping user after Phase 6.
 Prev "Current Status" (Phase 3) below is superseded.
 
 ## Superseded status log

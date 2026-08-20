@@ -1,0 +1,5 @@
+[k_high_risk_001]
+version = "1.0.0"
+# Demo safety rule threshold -- NOT universal clinical policy.
+high_mmol_l = 5.5
+critical_mmol_l = 6.0

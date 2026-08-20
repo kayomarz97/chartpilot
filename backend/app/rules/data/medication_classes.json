@@ -1,0 +1,32 @@
+{
+  "version": "0.1.0-demo",
+  "reviewed_by": "PENDING",
+  "note": "Demo-scoped, clinician review pending. Not exhaustive.",
+  "ingredient_to_class": {
+    "lisinopril": "ACE_INHIBITOR",
+    "enalapril": "ACE_INHIBITOR",
+    "ramipril": "ACE_INHIBITOR",
+    "losartan": "ARB",
+    "valsartan": "ARB",
+    "telmisartan": "ARB",
+    "spironolactone": "MRA",
+    "eplerenone": "MRA",
+    "sacubitril": "ARNI",
+    "amiloride": "POTASSIUM_SPARING_DIURETIC",
+    "triamterene": "POTASSIUM_SPARING_DIURETIC",
+    "potassium chloride": "POTASSIUM_SUPPLEMENT",
+    "trimethoprim": "TRIMETHOPRIM",
+    "ibuprofen": "NSAID",
+    "naproxen": "NSAID"
+  },
+  "potassium_raising_classes": [
+    "ACE_INHIBITOR",
+    "ARB",
+    "MRA",
+    "ARNI",
+    "POTASSIUM_SPARING_DIURETIC",
+    "POTASSIUM_SUPPLEMENT",
+    "TRIMETHOPRIM",
+    "NSAID"
+  ]
+}
