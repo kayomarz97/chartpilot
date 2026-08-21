@@ -25,11 +25,14 @@ fi
 echo "==> 2. Triggering nightly Scheduler job '${SCHEDULER_JOB}' once..."
 gcloud scheduler jobs run "${SCHEDULER_JOB}" --location="${REGION}" ${GCLOUD_PROJECT_FLAG}
 
-echo "==> 3. Waiting ~30s, then listing Firestore checkpoint docs..."
-echo "    (Firestore console → Data is the visual check; CLI listing below.)"
-sleep 30 || true
-gcloud firestore documents list --collection-ids="checkpoints" \
+echo "==> 3. Waiting ~40s for the fan-out + per-patient Gemini runs, then checking Firestore..."
+echo "    Results are written at: runs/nightly/patients/{patient_id}  (+ claims/ + evidence/ subcollections)."
+echo "    The Firestore console (Data tab) is the reliable visual check. A CLI peek at the"
+echo "    'patients' collection group (each per-patient PatientSummary doc):"
+sleep 40 || true
+gcloud firestore documents list --collection-ids="patients" \
   --format='value(name)' ${GCLOUD_PROJECT_FLAG} 2>/dev/null | head -20 \
-  || echo "    (adjust --collection-ids to your actual collection; see storage/firestore_repo.py)"
+  || echo "    (no docs yet, or collection-group listing unsupported — check the console)"
 
-echo "==> Smoke complete. Inspect run status in the Firestore console."
+echo "==> Smoke complete. In the Firestore console, open runs/nightly/patients/patient-a and confirm"
+echo "    its status + the claims/ and evidence/ subcollections are populated."

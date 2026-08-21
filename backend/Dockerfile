@@ -8,15 +8,18 @@
 # reads the repo-root `config/models.yaml` at runtime (resolved via
 # `Path(__file__).resolve().parents[3]`), which lives OUTSIDE `backend/` and
 # therefore OUTSIDE this build context -- it is NOT copied into this image.
-# This is safe for Part A: nothing wired up in `app/api/routes.py` this
-# phase (§76A.1) calls `load_model_pin`/`verify_pinned_models` -- the real
-# per-patient handler is a deliberate `NotImplementedError` stub pending
-# Phase 19's live Gemini wiring. Before Phase 19 wires a real handler that
-# DOES call `load_model_pin`, either (a) switch this build to a repo-root
-# context and add `COPY ../config /app/config` (plus move/duplicate
-# `.dockerignore` to `backend/Dockerfile.dockerignore` so BuildKit still
-# finds it), or (b) move `config/models.yaml` under `backend/config/`. Do
-# not let a Phase 19 handler silently ship without one of these.
+# This is still safe as of Phase 19's live per-patient handler
+# (`app.api.composition.live_process_patient_handler`): it builds
+# `GeminiInteractionsClient`s directly from `Settings.model_a_id`/
+# `model_b_id`, and never calls `load_model_pin`/`verify_pinned_models` --
+# that function is an OPTIONAL startup pin-verification gate, not part of
+# the per-request path, and is deliberately NOT run inside this container.
+# If a future phase wires `verify_pinned_models` into in-container startup,
+# either (a) switch this build to a repo-root context and add
+# `COPY ../config /app/config` (plus move/duplicate `.dockerignore` to
+# `backend/Dockerfile.dockerignore` so BuildKit still finds it), or (b) move
+# `config/models.yaml` under `backend/config/`. Do not let such a change
+# silently ship without one of these.
 #
 # Multi-stage: `builder` resolves + installs the pinned dependency set with
 # `uv` from `uv.lock` (no compiler/toolchain ships in the runtime image);

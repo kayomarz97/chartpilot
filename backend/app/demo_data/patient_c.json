@@ -1,0 +1,47 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [{ "relation": "self", "url": "patient_c.json" }],
+  "entry": [
+    {
+      "fullUrl": "Patient/patient-c",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-c",
+        "name": [{ "family": "Osei", "given": ["Ama"] }],
+        "gender": "female",
+        "birthDate": "1978-02-19"
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-c-k1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-c-k1",
+        "status": "final",
+        "code": {
+          "coding": [
+            { "system": "http://loinc.org", "code": "2823-3", "display": "Potassium [Moles/volume] in Serum or Plasma" }
+          ],
+          "text": "Potassium"
+        },
+        "subject": { "reference": "Patient/patient-c" },
+        "effectiveDateTime": "2026-08-17T08:00:00+00:00",
+        "issued": "2026-08-17T08:20:00+00:00",
+        "valueQuantity": { "value": 6.1, "unit": "mEq", "code": "mEq" }
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/med-c-1",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-c-1",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": { "text": "Lisinopril 10 MG Oral Tablet" },
+        "subject": { "reference": "Patient/patient-c" },
+        "authoredOn": "2026-02-01T00:00:00+00:00"
+      }
+    }
+  ]
+}

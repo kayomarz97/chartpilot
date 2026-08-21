@@ -42,6 +42,19 @@ class Settings(BaseSettings):
         import/startup time; `require_oidc` itself fails CLOSED (rejects
         every request) when it is unset, rather than silently allowing
         unauthenticated access (spec §76A.1).
+      - tasks_queue: the Cloud Tasks queue id (not a full resource path)
+        `app.api.composition.build_live_queue` targets. Optional for the
+        same reason as `oidc_audience` above; `build_live_queue` itself
+        fails CLOSED (raises `RuntimeError`) when it is unset.
+      - worker_url: this service's own `/tasks/process-patient` URL, given
+        to Cloud Tasks as the HTTP target for every enqueued task.
+      - tasks_invoker_sa: the service account email Cloud Tasks uses to mint
+        the OIDC token attached to each task, so Cloud Run's
+        `require_oidc` can verify the caller.
+      - firestore_database: the named Firestore database (spec §44 uses an
+        explicit regional database, never the `(default)` one) that
+        `app.api.composition._build_run_repository` connects
+        `FirestoreRunRepository` to.
     """
 
     model_config = SettingsConfigDict(
@@ -60,6 +73,10 @@ class Settings(BaseSettings):
     allow_synthetic_debug_logs: bool = False
     display_timezone: str = "Asia/Kolkata"
     oidc_audience: str | None = None
+    tasks_queue: str | None = None
+    worker_url: str | None = None
+    tasks_invoker_sa: str | None = None
+    firestore_database: str | None = None
 
 
 @lru_cache(maxsize=1)

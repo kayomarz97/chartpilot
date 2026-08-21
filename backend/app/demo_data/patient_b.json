@@ -1,0 +1,67 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [{ "relation": "self", "url": "patient_b.json" }],
+  "entry": [
+    {
+      "fullUrl": "Patient/patient-b",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-b",
+        "name": [{ "family": "Nakamura", "given": ["Kenji"] }],
+        "gender": "male",
+        "birthDate": "1962-11-30"
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-b-k-old",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-b-k-old",
+        "status": "final",
+        "code": {
+          "coding": [
+            { "system": "http://loinc.org", "code": "2823-3", "display": "Potassium [Moles/volume] in Serum or Plasma" }
+          ],
+          "text": "Potassium"
+        },
+        "subject": { "reference": "Patient/patient-b" },
+        "effectiveDateTime": "2026-06-01T08:00:00+00:00",
+        "issued": "2026-06-01T08:20:00+00:00",
+        "valueQuantity": { "value": 6.3, "unit": "mmol/L", "system": "http://unitsofmeasure.org", "code": "mmol/L" },
+        "referenceRange": [{ "low": { "value": 3.5, "unit": "mmol/L" }, "high": { "value": 5.1, "unit": "mmol/L" } }]
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-b-k-new",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-b-k-new",
+        "status": "final",
+        "code": {
+          "coding": [
+            { "system": "http://loinc.org", "code": "2823-3", "display": "Potassium [Moles/volume] in Serum or Plasma" }
+          ],
+          "text": "Potassium"
+        },
+        "subject": { "reference": "Patient/patient-b" },
+        "effectiveDateTime": "2026-08-15T08:00:00+00:00",
+        "issued": "2026-08-15T08:20:00+00:00",
+        "valueQuantity": { "value": 4.1, "unit": "mmol/L", "system": "http://unitsofmeasure.org", "code": "mmol/L" },
+        "referenceRange": [{ "low": { "value": 3.5, "unit": "mmol/L" }, "high": { "value": 5.1, "unit": "mmol/L" } }]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/med-b-1",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-b-1",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": { "text": "Lisinopril 5 MG Oral Tablet" },
+        "subject": { "reference": "Patient/patient-b" },
+        "authoredOn": "2026-05-01T00:00:00+00:00"
+      }
+    }
+  ]
+}

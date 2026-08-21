@@ -1,0 +1,84 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [{ "relation": "self", "url": "patient_e.json" }],
+  "entry": [
+    {
+      "fullUrl": "Patient/patient-e",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-e",
+        "name": [{ "family": "Boucher", "given": ["Claire"] }],
+        "gender": "female",
+        "birthDate": "1958-01-22"
+      }
+    },
+    {
+      "fullUrl": "Observation/obs-e-k1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-e-k1",
+        "status": "final",
+        "code": {
+          "coding": [
+            { "system": "http://loinc.org", "code": "2823-3", "display": "Potassium [Moles/volume] in Serum or Plasma" }
+          ],
+          "text": "Potassium"
+        },
+        "subject": { "reference": "Patient/patient-e" },
+        "effectiveDateTime": "2026-08-16T08:00:00+00:00",
+        "issued": "2026-08-16T08:20:00+00:00",
+        "valueQuantity": { "value": 5.7, "unit": "mmol/L", "system": "http://unitsofmeasure.org", "code": "mmol/L" },
+        "referenceRange": [{ "low": { "value": 3.5, "unit": "mmol/L" }, "high": { "value": 5.1, "unit": "mmol/L" } }]
+      }
+    },
+    {
+      "fullUrl": "Condition/cond-e-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-e-1",
+        "clinicalStatus": { "coding": [{ "code": "active" }] },
+        "verificationStatus": { "coding": [{ "code": "confirmed" }] },
+        "code": { "text": "Chronic kidney disease, stage 3" },
+        "subject": { "reference": "Patient/patient-e" },
+        "recordedDate": "2024-05-20"
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/med-e-1",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-e-1",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": { "text": "Spironolactone 25 MG Oral Tablet" },
+        "subject": { "reference": "Patient/patient-e" },
+        "authoredOn": "2025-12-01T00:00:00+00:00"
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/med-e-2",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-e-2",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": { "text": "Lisinopril 20 MG Oral Tablet" },
+        "subject": { "reference": "Patient/patient-e" },
+        "authoredOn": "2025-12-01T00:00:00+00:00"
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/med-e-3",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-e-3",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": { "text": "Potassium Chloride ER 10 MEQ Tablet" },
+        "subject": { "reference": "Patient/patient-e" },
+        "authoredOn": "2026-06-15T00:00:00+00:00"
+      }
+    }
+  ]
+}

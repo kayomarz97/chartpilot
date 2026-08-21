@@ -1,0 +1,63 @@
+{
+  "created_at": "2026-08-20T13:38:37.903932Z",
+  "manifest_hash": "d74a08a19d92639b5dadeded1f4d94bbd4d2b2b6f05f28da56b7f1c23e65556f",
+  "records": [
+    {
+      "content": "6 ADVERSE REACTIONS The following adverse reactions are described elsewhere: Angioedema [see Warnings and Precautions (5.2) ] Hypotension [see Warnings and Precautions (5.3) ] Hepatic failure [see Warnings and Precautions (5.4) ] Renal impairment [see Warnings and Precautions (5.5) ] Hyperkalemia [see Warnings and Precautions (5.6) ] The most common adverse reaction for patients treated for hypertension (\u22653%) was fatigue. ( 6.1 ) The most common adverse reactions for patients treated for heart failure (>6%) were hypotension and dizziness. ( 6.1 ) To report SUSPECTED ADVERSE REACTIONS, contact Amneal Pharmaceuticals at 1-877-835-5472 or FDA at 1-800-FDA-1088 or www.fda.gov/medwatch. 6.1 Clinical Trials Experience Because clinical trials are conducted under widely varying conditions, adverse reaction rates observed in clinical trials of a drug cannot be directly compared to rates in the clinical trials of another drug and may not reflect the rates observed in clinical practice. Enalapril has been evaluated for safety in more than 10,000 patients, including over 1,000 patients treated for one year or more. In clinical trials, discontinuation of therapy for clinical adverse experiences was required in 3.3% of patients with hypertension and in 5.7% of patients with heart failure. Hypertension Adverse reactions (where rate on enalapril exceeds the rate on placebo by at least 0.2%) occurring in greater than 1% of patients with hypertension treated with enalapril in controlled clinical trials are shown below. In patients treated with enalapril, the maximum duration of therapy was three years; in placebo treated patients, the maximum duration of therapy was 12 weeks. Adverse Reactions Occurring in Greater Than 1% of Patients With Hypertension Enalapril Maleate Tablets (n = 2,314) Incidence (discontinuation) Placebo (n = 230) Incidence Body As A Whole Fatigue 3 (<0.1) 2.6 Orthostatic Effects 1.2 (<0.1) 0 Asthenia 1.1 (0.1) 0.9 Respiratory Cough 1.3 (0.1) 0.9 Skin Rash 1.4 (0.4) 0.4 Heart Failure Adverse reactions seen in clinical trials of heart failure were similar to those seen in clinical trials for hypertension. In patients treated for heart failure, there was an increased incidence of hypotension 6.7 percent versus 0.6 percent in placebo and dizziness 7.9 percent versus 0.6 percent in placebo. 6.2 Other Adverse Reactions from Clinical Studies or Postmarketing Experience The following adverse reactions have been reported in clinical studies or postmarketing experience with enalapril. Because some of these reactions were reported voluntarily from a population of uncertain size, it is not always possible to reliably estimate their frequency or establish a causal relationship to drug exposure. Other serious clinical adverse experiences occurring since the drug was marketed or adverse experiences occurring in 0.5% to 1% of patients with hypertension or heart failure in clinical trials are listed below and, within each category, are in order of decreasing severity. Cardiovascular: Cardiac arrest; myocardial infarction or cerebrovascular accident, possibly secondary to excessive hypotension in high risk patients [see Warnings and Precautions (5.3) ] ; pulmonary embolism and infarction; pulmonary edema; rhythm disturbances, including atrial tachycardia and bradycardia; atrial fibrillation; palpitation; Raynaud's phenomenon. Digestive: Ileus, pancreatitis, melena, anorexia, dyspepsia, constipation, glossitis, stomatitis, dry mouth. Hematologic: Rare cases of neutropenia, thrombocytopenia, and bone marrow depression. Musculoskeletal: Muscle cramps. Nervous/Psychiatric: Depression, confusion, ataxia, somnolence, insomnia, nervousness, peripheral neuropathy (e.g., paresthesia, dysesthesia), dream abnormality. Respiratory: Bronchospasm, rhinorrhea, sore throat and hoarseness, asthma, upper respiratory infection, pulmonary infiltrates, eosinophilic pneumonitis. Skin: Exfoliative dermatitis, toxic epidermal necrolysis, Stevens-Johnson syndrome, pemphigus, herpes zoster, erythema multiforme, urticaria, pruritus, alopecia, flushing, diaphoresis, photosensitivity. Special Senses: Blurred vision, taste alteration, anosmia, tinnitus, conjunctivitis, dry eyes, tearing. Urogenital: Flank pain, gynecomastia, impotence. Miscellaneous: A symptom complex has been reported which may include some or all of the following: a positive ANA, an elevated erythrocyte sedimentation rate, arthralgia/arthritis, myalgia/myositis, fever, serositis, vasculitis, leukocytosis, eosinophilia, photosensitivity, dermatologic manifestations.",
+      "content_hash": "ce9dbee31b731f95a240ab0d2ef01c6006c85549f30d8d03949da3705afacc16",
+      "id": "openfda:e81a8aca-0e7c-4a02-b596-09e4ac22c70e:adverse_reactions",
+      "jurisdiction": "us_fda",
+      "metadata": {
+        "application_number": "ANDA212894",
+        "effective_time": "20190329",
+        "section": "adverse_reactions",
+        "set_id": "e81a8aca-0e7c-4a02-b596-09e4ac22c70e"
+      },
+      "publication_date": "20190329",
+      "publisher": "U.S. Food and Drug Administration (openFDA)",
+      "retrieved_at": "2026-08-20T13:38:37.903932Z",
+      "source_url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e81a8aca-0e7c-4a02-b596-09e4ac22c70e",
+      "tier": "regulatory_label",
+      "title": "ENALAPRIL \u2014 adverse reactions",
+      "version": "9"
+    },
+    {
+      "content": "Renin-angiotensin-aldosterone system inhibitors (RAASi) are essential in chronic kidney disease (CKD) and heart failure (HF) management but may increase the risk of hyperkalemia (HK). Sodium zirconium cyclosilicate (SZC), a novel potassium binder, may enable sustained RAASi use and dose optimization. This meta-analysis evaluated the association between SZC therapy and RAASi maintenance and optimization.\n\nWe systematically searched PubMed, Embase, Cochrane, and Web of Science from inception until August 2025 for RCTs, observational studies and post-hoc analyses comparing SZC with placebo or standard care in RAASi-treated patients with HK (PROSPERO registration: CRD42024603403). Six studies (3 RCTs, 3 observational; n=79,956 patients) with 3-12 months follow-up were included. Primary outcomes were: RAASi maintenance, up-titration, and discontinuation/down-titration. Subgroup analyses and comparator-stratified analyses were performed. An exploratory meta-regression was conducted to evaluate potassium reduction magnitude and RAASi maintenance association.\n\nSZC was associated with a higher likelihood of RAASi maintenance (RR 1.26; 95% CI 1.14-1.40; I2=77%) and up-titration (RR 1.47; 95% CI 1.20-1.80), and with a lower risk of discontinuation or down-titration (RR 0.56; 95% CI 0.46-0.68). Subgroup analyses showed consistent benefits in patients with baseline potassium >5.0mEq/L and in RCT-only analyses. The exploratory meta-regression revealed a statistically significant ecological association between the magnitude of potassium reduction and RAASi maintenance (p=0.002).\n\nSZC was associated with improved maintenance and optimization of RAASi therapy, while reducing the risk of down-titration or discontinuation. Randomized trials powered for cardiovascular and renal endpoints are needed to determine whether SZC use translates into improved patient outcomes.",
+      "content_hash": "e48b7c68ca324afc891dfd79affff5717c32453c5d96b8384c8f2dddf5344173",
+      "id": "pubmed:42618199",
+      "jurisdiction": "not_applicable",
+      "metadata": {
+        "doi": "10.1016/j.nefroe.2026.501532",
+        "mesh": "Humans,Silicates,Hyperkalemia,Renin-Angiotensin System,Angiotensin-Converting Enzyme Inhibitors,Renal Insufficiency, Chronic",
+        "publication_types": "Journal Article,Meta-Analysis,Systematic Review,Review"
+      },
+      "publication_date": "2026",
+      "publisher": "Nefrologia",
+      "retrieved_at": "2026-08-20T13:38:37.903932Z",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/42618199/",
+      "tier": "literature",
+      "title": "Sodium zirconium cyclosilicate for renin-angiotensin-aldosterone system inhibitor therapy optimization: A systematic review and meta-analysis with meta-regression.",
+      "version": null
+    },
+    {
+      "content": "PLACEHOLDER TEXT \u2014 pending curation, do not display as real guidance",
+      "content_hash": "fe99a083a5d1e033628b1bab8326770edf21883e37cbe597ed1dac72d2dadf2e",
+      "id": "guideline:example_placeholder",
+      "jurisdiction": "not_applicable",
+      "metadata": {
+        "claim_type": "monitoring",
+        "license_status": "unknown-pending-review",
+        "reviewed_by": "PENDING",
+        "section": "monitoring"
+      },
+      "publication_date": "1970-01-01",
+      "publisher": "DEMO PLACEHOLDER \u2014 not a real publisher citation",
+      "retrieved_at": "2026-08-20T13:38:37.903932Z",
+      "source_url": "https://example.invalid/placeholder-guideline",
+      "tier": "guideline",
+      "title": "DEMO PLACEHOLDER \u2014 hyperkalemia monitoring",
+      "version": "0-placeholder"
+    }
+  ],
+  "snapshot_id": "ebe894943f90727b"
+}

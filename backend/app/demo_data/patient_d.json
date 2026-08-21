@@ -1,0 +1,49 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "link": [{ "relation": "self", "url": "patient_d.json" }],
+  "entry": [
+    {
+      "fullUrl": "Patient/patient-d",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-d",
+        "name": [{ "family": "Petrov", "given": ["Ivan"] }],
+        "gender": "male",
+        "birthDate": "1985-07-04"
+      }
+    },
+    {
+      "fullUrl": "AllergyIntolerance/allergy-d-1",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-d-1",
+        "clinicalStatus": { "coding": [{ "code": "active" }] },
+        "verificationStatus": { "coding": [{ "code": "confirmed" }] },
+        "type": "allergy",
+        "code": { "text": "Sulfonamide antibiotics" },
+        "patient": { "reference": "Patient/patient-d" },
+        "recordedDate": "2019-03-14",
+        "reaction": [
+          {
+            "substance": { "text": "sulfamethoxazole" },
+            "manifestation": [{ "text": "Anaphylaxis" }],
+            "severity": "severe"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/med-d-1",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-d-1",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": { "text": "Sulfamethoxazole-Trimethoprim DS Tablet" },
+        "subject": { "reference": "Patient/patient-d" },
+        "authoredOn": "2026-08-10T00:00:00+00:00"
+      }
+    }
+  ]
+}

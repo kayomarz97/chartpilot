@@ -1,6 +1,36 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 19 COMPLETE (live composition root — deployed worker actually processes patients). Committed + tag phase-19.
+PHASE 19 (Sonnet built, Opus independently verified): the deployed Cloud Run worker now REALLY runs the pipeline.
+  - app/demo_data/: packaged 5 patient bundles + evidence_snapshot.json under app/ (ships in image; tests/ is
+    .dockerignore'd). Verified in image at /app/app/demo_data (6 files). No FHIR pagination → no other fixtures.
+  - app/api/composition.py: run_demo_patient (PURE, injected deps — hermetically tested with FakeGemini +
+    InMemoryRunRepository) → run_patient(...) with real deps. Idempotency §46: get_patient_summary terminal →
+    short-circuit (no re-run on Cloud Tasks redelivery). live_process_patient_handler wires REAL
+    GeminiInteractionsClient (A+B from settings) + FirestoreRunRepository (# VERIFY-LIVE, only 2 real-net seams).
+    DemoAppointmentSource (5 demo IDs); build_live_queue (fail-loud naming missing settings).
+  - PATIENT-ID SUBTLETY (documented): run_patient persists under the bundle's FHIR Patient.id (hyphenated
+    "patient-a"), NOT the filename. So DEMO_PATIENT_IDS = hyphenated FHIR ids; _bundle_ref_for_patient_id maps
+    "patient-a"→"patient_a.json". Idempotency check + scheduler enqueue both use the hyphenated id. Consistent
+    end-to-end (scheduler run_id=nightly → runs/nightly/patients/patient-a in Firestore).
+  - config.py +tasks_queue/worker_url/tasks_invoker_sa/firestore_database (optional). routes.py providers now
+    return the REAL objects (no more NotImplementedError). Dockerfile models.yaml comment corrected (handler is
+    decoupled from models.yaml; that's only the optional not-run-in-container pin-verify gate).
+VERIFY (Opus, independent — 2026-08-21): make check PHASE=19 exit 0, 317 passed. test_composition.py 11/11
+  (all 5 patients end-to-end hermetic + idempotency + endpoint + queue builder). Docker rebuild OK, demo_data
+  ships, /health 200. evidence/phase_19.txt.
+DESIGN CHOICE (honest): the deployed worker uses the single-shot run_patient + FirestoreRunRepository (real
+  result persistence: runs/{run_id}/patients/{pid} + claims/ + evidence/ subcollections), NOT the per-stage
+  process_patient/Checkpoint machinery (which stays hermetically unit-tested as the durability design). The
+  returned Checkpoint is a synthesized status record (counters=0, documented). Firestore CheckpointStore not
+  built — RunRepository persistence is the meaningful durable write. Fine for demo; note if scaling.
+INFRA (Part B, Opus-authored, NOT run): infra/{_config,00_enable_apis,10_service_accounts,20_firestore,
+  22_firestore_rules,25_secret,30_tasks_queue,40_deploy_run,50_scheduler,60_smoke}.sh + firestore.rules +
+  firebase.json + README.md. All bash -n clean; every gcloud pinned --project=chartpilot-agentic + guardrail.
+Next action: USER runs infra/ steps 00→60 (exact instructions in chat) = Phase 18 Part B deploy + Phase 19 live
+  smoke on real infra. Then Phase 20 self-audit (§80/§81; NO video per user). Rotate the pasted Gemini key.
+--- Phase 18 Part A detail (superseded header) ---
 Phase: 18 PART A COMPLETE (deployment layer — hermetic + locally Docker-verified). Committed + tag phase-18.
 PHASE 18 SPLIT: Part A = machine-checkable container + endpoints + auth + real CloudTasksQueue + tests (DONE,
   this session). Part B = actual gcloud deploy to isolated chartpilot-agentic — scripts written under infra/,

@@ -20,6 +20,7 @@ Every script pins `--project=chartpilot-agentic` and refuses to touch any other 
 | 00 | `00_enable_apis.sh` | Enable Run/Tasks/Scheduler/Firestore/Build/Artifact/Secret APIs | free |
 | 10 | `10_service_accounts.sh` | Runtime SA (Firestore) + invoker SA (calls Run) | free |
 | 20 | `20_firestore.sh` | Firestore Native DB in asia-south1 | ~free (usage-billed) |
+| 22 | `22_firestore_rules.sh` | (optional) deny-all client Security Rules — defense-in-depth | ~free |
 | 25 | `25_secret.sh` | Secret Manager container for the Gemini key + grant runtime SA read | ~free |
 | — | *(add the key value — the exact one-liner is printed by step 25)* | | |
 | 30 | `30_tasks_queue.sh` | Cloud Tasks queue | ~free (usage-billed) |
@@ -33,6 +34,7 @@ cd infra
 ./00_enable_apis.sh
 ./10_service_accounts.sh
 ./20_firestore.sh
+./22_firestore_rules.sh # optional; skips cleanly if Firebase CLI absent
 ./25_secret.sh          # then run the printed 'secrets versions add' one-liner with your key
 ./30_tasks_queue.sh
 ./40_deploy_run.sh

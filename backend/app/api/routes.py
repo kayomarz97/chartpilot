@@ -16,9 +16,10 @@ Both endpoints are protected by `require_oidc` (spec §76A.1) and get their
 collaborators (`appointment_source`, `queue`, `clock`,
 `process_patient_handler`) through FastAPI dependencies so tests can swap in
 hermetic fakes via `app.dependency_overrides`. The real (production) default
-providers are thin `# VERIFY-LIVE`/`NotImplementedError` wirings -- Part A's
-job is a correct, hermetically-tested HTTP surface, not a fully live
-composition root (that needs additional settings/infra wiring, Phase 19).
+providers wire the live composition root in `app.api.composition` (real
+Gemini + real Firestore + real Cloud Tasks, Phase 19) -- every network-
+touching construction is isolated behind that module's `# VERIFY-LIVE`
+markers, so this module itself stays free of any direct network dependency.
 """
 
 from __future__ import annotations
@@ -31,6 +32,12 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
 
 from app.api.auth import require_oidc
+from app.api.composition import (
+    DemoAppointmentSource,
+    build_live_queue,
+    live_process_patient_handler,
+)
+from app.config import get_settings
 from app.tasks.appointments import AppointmentSource
 from app.tasks.enqueue import EnqueueResult, enqueue_run
 from app.tasks.models import Checkpoint, RunTask
@@ -54,33 +61,24 @@ class EnqueueRunRequest(BaseModel):
 def get_appointment_source() -> AppointmentSource:
     """Real (production) `AppointmentSource` provider.
 
-    No real scheduling-system adapter exists yet -- only the `Protocol` and
-    the hermetic `InMemoryAppointmentSource` (see `app.tasks.appointments`).
-    Building one (e.g. reading FHIR `Appointment` resources) is Phase 19
-    scope. Tests MUST override this via
+    No real scheduling-system adapter exists yet -- until one does (e.g.
+    reading FHIR `Appointment` resources), the live nightly fan-out targets
+    the packaged demo patients via `DemoAppointmentSource` (spec §76A.1
+    Phase 19). Tests MUST override this via
     `app.dependency_overrides[get_appointment_source]`.
     """
-    raise NotImplementedError(
-        "no real AppointmentSource adapter wired yet -- Phase 19 scope; "
-        "override get_appointment_source in tests/real deployment wiring"
-    )
+    return DemoAppointmentSource()
 
 
 def get_queue() -> TaskQueue:
     """Real (production) `TaskQueue` provider.
 
-    `app.tasks.cloud_tasks.CloudTasksQueue` exists and structurally
-    satisfies `TaskQueue`, but constructing it for real needs the target
-    queue name, worker URL, and invoker service account -- none of which are
-    yet plumbed through `app.config.Settings` (that plumbing is Phase 19/
-    Part B `infra/` scope, spec §76). Tests MUST override this via
-    `app.dependency_overrides[get_queue]`.
+    Builds `app.tasks.cloud_tasks.CloudTasksQueue` from `app.config.Settings`
+    (spec §76A.1 Phase 19); raises `RuntimeError` if any required setting is
+    unset (see `app.api.composition.build_live_queue`). Tests MUST override
+    this via `app.dependency_overrides[get_queue]`.
     """
-    raise NotImplementedError(
-        "real CloudTasksQueue wiring needs queue/worker-url/service-account "
-        "settings not yet in app.config.Settings -- Phase 19 scope; "
-        "override get_queue in tests/real deployment wiring"
-    )
+    return build_live_queue(get_settings())
 
 
 def _utc_now() -> datetime:
@@ -93,25 +91,16 @@ def get_clock() -> Callable[[], datetime]:
     return _utc_now
 
 
-def _live_process_patient_handler(task: RunTask) -> Checkpoint:
-    """Real (production) `process_patient` wiring.
+def get_process_patient_handler() -> Callable[[RunTask], Checkpoint]:
+    """Real (production) `process_patient_handler` provider.
 
-    `app.tasks.orchestrator.process_patient` itself is fully implemented,
-    but calling it for real needs live stage runners (FHIR/Gemini/PubMed/
-    openFDA) and a real Firestore-backed `CheckpointStore` -- constructing
-    those per-request without a proper composition root is out of scope for
-    Part A. Tests MUST override this via
+    Wires the real Gemini + Firestore composition root
+    (`app.api.composition.live_process_patient_handler`), which runs the
+    demo patient through `app.pipeline.runner.run_patient` end to end (spec
+    §76A.1 Phase 19). Tests MUST override this via
     `app.dependency_overrides[get_process_patient_handler]`.
     """
-    raise NotImplementedError(
-        "live process_patient wiring is Phase 19 scope -- Part A only wires "
-        "the HTTP surface + auth + dedup hermetically"
-    )
-
-
-def get_process_patient_handler() -> Callable[[RunTask], Checkpoint]:
-    """Real (production) `process_patient_handler` provider."""
-    return _live_process_patient_handler
+    return live_process_patient_handler
 
 
 _OidcClaims = Annotated[Mapping[str, Any], Depends(require_oidc)]
