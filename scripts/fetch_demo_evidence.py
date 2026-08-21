@@ -5,8 +5,22 @@ Mirrors `scripts/refresh_evidence.py`'s shape (real httpx-backed `http_get`,
 never imported by tested code) but is scoped narrowly to what the Phase 14
 demo needs: one openFDA label section for an ACE inhibitor (contraindications
 or warnings -- whichever section actually contains potassium/hyperkalemia
-language) plus one PubMed abstract about ACE-inhibitor hyperkalemia, plus the
-existing guideline-pack PENDING placeholder record.
+language), one PubMed abstract about ACE-inhibitor hyperkalemia, up to
+`GUIDELINE_CITATION_RETMAX` real PubMed GUIDELINE-tier citations (TD-012 --
+see `GUIDELINE_CITATION_TERM`) relevant to hyperkalemia/RAAS-inhibitor/CKD
+potassium management, plus the existing guideline-pack PENDING placeholder
+record.
+
+NOTE on re-running this script (TD-012): PubMed's live search results for
+both the ACE-inhibitor literature term AND `GUIDELINE_CITATION_TERM` can
+shift over time as new articles are indexed -- a fresh run is NOT guaranteed
+to reproduce the exact same PMIDs previously committed. If you only want to
+add/refresh the guideline citations without perturbing the already-committed
+openFDA/literature records (and risking an unrelated citation-chain test
+failure elsewhere), fetch the guideline citations with `app.evidence.
+guideline_citations.search_and_fetch_guideline_citations` directly and merge
+them into the existing snapshot's `records` instead of re-running `main()`
+wholesale.
 
 NOTE on ingredient choice: the spec asked for the `lisinopril` label, but at
 fetch time openFDA's live `/drug/label.json` returned 68 lisinopril labels
@@ -41,6 +55,23 @@ if str(_BACKEND_DIR) not in sys.path:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GUIDELINE_PACK_DIR = REPO_ROOT / "evidence" / "guideline-pack"
 OUTPUT_PATH = REPO_ROOT / "backend" / "tests" / "fixtures" / "demo" / "evidence_snapshot.json"
+#: `load_demo_snapshot`'s runtime default lives under `app/demo_data` (see
+#: `app.api.composition.DEMO_DATA_DIR`) -- this script writes the IDENTICAL
+#: bytes to both locations so the packaged demo data never drifts from the
+#: hermetic test fixture.
+OUTPUT_PATH_DEMO_DATA = REPO_ROOT / "backend" / "app" / "demo_data" / "evidence_snapshot.json"
+
+#: TD-012 term: PubMed guideline-tagged citations relevant to the demo
+#: patients' hyperkalemia / RAAS-inhibitor / CKD potassium-management
+#: scenario. Verified live 2026-08-22 against
+#: `app.evidence.guideline_citations.search_and_fetch_guideline_citations`
+#: (which appends the `"guideline"[Publication Type]` filter) -- returns
+#: real, on-topic Practice Guideline / Consensus Statement citations
+#: including PMID 33637203 (KDIGO 2021 CPG for Blood Pressure Management in
+#: CKD, Kidney International) and PMID 29726985-adjacent RAAS-inhibitor
+#: hyperkalemia consensus statements.
+GUIDELINE_CITATION_TERM = "hyperkalemia AND chronic kidney disease"
+GUIDELINE_CITATION_RETMAX = 3
 
 _POTASSIUM_MARKERS = ("potassium", "hyperkalemia", "hyperkalaemia")
 
@@ -58,6 +89,7 @@ def _build_http_get() -> object:
 
 def main() -> None:
     from app.evidence.errors import EvidenceError
+    from app.evidence.guideline_citations import search_and_fetch_guideline_citations
     from app.evidence.guideline_pack import load_guideline_pack
     from app.evidence.models import EvidenceRecord
     from app.evidence.openfda import fetch_label
@@ -68,6 +100,22 @@ def main() -> None:
     http_get = _build_http_get()
     retrieved_at = datetime.now(UTC)
     fell_back: list[str] = []
+
+    # ONE shared PubMed throttle for every PubMed call this script makes
+    # (literature abstract + guideline citations) -- mirrors
+    # `refresh_evidence.py`'s per-source throttle. A fresh
+    # `TokenBucketRateLimiter` per call would start each bucket full and let
+    # back-to-back calls burst past NCBI's real, IP-level rate limit; a
+    # single shared instance actually paces every PubMed request in this run.
+    # `capacity=1.0` (no burst credit) rather than the default (== rate,
+    # which permits an instant 3-request burst): empirically, an instant
+    # burst of esearch+efetch+esearch+efetch calls this script makes still
+    # tripped NCBI's real "API rate limit exceeded" 429 even though the
+    # bucket math allowed it, so every call here waits its full turn at
+    # `default_rate_per_sec(api_key=None)` with zero burst.
+    pubmed_throttle = TokenBucketRateLimiter(
+        rate_per_sec=default_rate_per_sec(api_key=None), capacity=1.0
+    )
 
     records: list[EvidenceRecord] = []
 
@@ -136,14 +184,14 @@ def main() -> None:
             "ACE inhibitor hyperkalemia",
             http_get=http_get,  # type: ignore[arg-type]
             retmax=1,
-            throttle=TokenBucketRateLimiter(rate_per_sec=default_rate_per_sec(api_key=None)),
+            throttle=pubmed_throttle,
         )
         pubmed_records = (
             efetch(
                 pmids,
                 http_get=http_get,  # type: ignore[arg-type]
                 retrieved_at=retrieved_at,
-                throttle=TokenBucketRateLimiter(rate_per_sec=default_rate_per_sec(api_key=None)),
+                throttle=pubmed_throttle,
             )
             if pmids
             else []
@@ -184,16 +232,49 @@ def main() -> None:
             )
         )
 
+    # --- PubMed guideline citations (TD-012): real citations to PUBLISHED
+    # clinical guidelines (PubMed publication type "Guideline"), surfaced as
+    # GUIDELINE-tier evidence with reviewed_by=PENDING -- citation metadata +
+    # abstract only, never licensed guideline body text. See
+    # `GUIDELINE_CITATION_TERM`'s docstring comment above for what this
+    # query returns and why it's on-topic for the demo patients. ---
+    try:
+        guideline_citation_records = search_and_fetch_guideline_citations(
+            GUIDELINE_CITATION_TERM,
+            http_get=http_get,  # type: ignore[arg-type]
+            retmax=GUIDELINE_CITATION_RETMAX,
+            retrieved_at=retrieved_at,
+            throttle=pubmed_throttle,
+        )
+    except EvidenceError as exc:
+        print(f"[skip] PubMed guideline citations for {GUIDELINE_CITATION_TERM!r}: {exc}")
+        guideline_citation_records = []
+
+    if guideline_citation_records:
+        records.extend(guideline_citation_records)
+        for rec in guideline_citation_records:
+            print(f"[ok] PubMed guideline citation -> {rec.id} ({rec.title!r})")
+    else:
+        fell_back.append("pubmed_guideline:hyperkalemia-ckd")
+        print(
+            "[skip] no PubMed guideline citations fetched -- demo snapshot keeps only the "
+            "curated guideline-pack placeholder for this run"
+        )
+
     # --- Guideline pack PENDING placeholder ---
     records.extend(load_guideline_pack(GUIDELINE_PACK_DIR, retrieved_at=retrieved_at))
 
     snapshot = build_snapshot(records, created_at=retrieved_at)
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(
-        json.dumps(json.loads(snapshot.model_dump_json()), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    snapshot_json = (
+        json.dumps(json.loads(snapshot.model_dump_json()), indent=2, sort_keys=True) + "\n"
     )
-    print(f"snapshot {snapshot.snapshot_id}: {len(records)} record(s) -> {OUTPUT_PATH}")
+    for output_path in (OUTPUT_PATH, OUTPUT_PATH_DEMO_DATA):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(snapshot_json, encoding="utf-8")
+    print(
+        f"snapshot {snapshot.snapshot_id}: {len(records)} record(s) -> "
+        f"{OUTPUT_PATH} and {OUTPUT_PATH_DEMO_DATA} (byte-identical)"
+    )
     if fell_back:
         print(f"FELL BACK to representative demo text for: {fell_back}")
     else:

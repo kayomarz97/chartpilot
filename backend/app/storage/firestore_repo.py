@@ -30,7 +30,12 @@ from typing import Any
 
 from google.cloud import firestore
 
-from app.storage.models import PatientSummary, chunk_documents, patient_summary_path
+from app.storage.models import (
+    PatientSummary,
+    chunk_documents,
+    patient_summary_path,
+    presentations_collection_path,
+)
 
 __all__ = ["FirestoreRunRepository"]
 
@@ -85,3 +90,20 @@ class FirestoreRunRepository:
     def read_documents(self, collection_path: str) -> list[tuple[str, dict[str, Any]]]:
         collection_ref = self._client.collection(collection_path)
         return [(snap.id, snap.to_dict() or {}) for snap in collection_ref.stream()]
+
+    def upsert_presentation(self, run_id: str, patient_id: str, payload: dict[str, Any]) -> None:
+        # VERIFY-LIVE: write path is `runs/{run_id}/presentations/{patient_id}`
+        # (see `presentations_collection_path`'s docstring for why this is a
+        # SIBLING collection to `patients/...`, not nested under it) --
+        # `DocumentReference.set` with no `merge=` fully overwrites the doc,
+        # correct here since `payload` is always the whole presentation dict.
+        doc_ref = self._client.collection(presentations_collection_path(run_id)).document(
+            patient_id
+        )
+        doc_ref.set(payload)
+
+    def list_presentations(self, run_id: str) -> list[dict[str, Any]]:
+        # VERIFY-LIVE: `CollectionReference.stream()` shape, matches
+        # `read_documents` above.
+        collection_ref = self._client.collection(presentations_collection_path(run_id))
+        return [snap.to_dict() or {} for snap in collection_ref.stream()]

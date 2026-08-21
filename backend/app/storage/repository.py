@@ -46,3 +46,14 @@ class RunRepository(Protocol):
         """Read every `(doc_id, data)` pair in the subcollection at
         `collection_path` -- for assertions/reconcile, not the hot path."""
         ...
+
+    def upsert_presentation(self, run_id: str, patient_id: str, payload: dict[str, Any]) -> None:
+        """Create or overwrite the UI-shaped presentation payload (TD-011,
+        `app.api.presentation.build_presentation`'s output) for one patient
+        in `run_id`, at `runs/{run_id}/presentations/{patient_id}`."""
+        ...
+
+    def list_presentations(self, run_id: str) -> list[dict[str, Any]]:
+        """Read every persisted presentation payload for `run_id` -- the
+        public, read-only `GET /runs/{run_id}` endpoint's sole data source."""
+        ...

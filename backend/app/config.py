@@ -53,8 +53,15 @@ class Settings(BaseSettings):
         `require_oidc` can verify the caller.
       - firestore_database: the named Firestore database (spec §44 uses an
         explicit regional database, never the `(default)` one) that
-        `app.api.composition._build_run_repository` connects
+        `app.api.composition.build_run_repository` connects
         `FirestoreRunRepository` to.
+      - frontend_origin: comma-separated list of allowed CORS origins for
+        the PUBLIC, read-only `GET /runs/{run_id}` endpoint (TD-011). The
+        data behind that endpoint is synthetic/non-secret run output, so an
+        unset value defaults to `["*"]` in `app.main`'s CORS middleware
+        setup -- this is intentional for this one read-only route, and is
+        orthogonal to auth: CORS never governs the OIDC-protected endpoints,
+        which continue to enforce `require_oidc` regardless of origin.
     """
 
     model_config = SettingsConfigDict(
@@ -77,6 +84,7 @@ class Settings(BaseSettings):
     worker_url: str | None = None
     tasks_invoker_sa: str | None = None
     firestore_database: str | None = None
+    frontend_origin: str | None = None
 
 
 @lru_cache(maxsize=1)

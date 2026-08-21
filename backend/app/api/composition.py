@@ -8,7 +8,7 @@ network-touching dependency (the two Gemini clients, the `RunRepository`) is
 injected, so it can be driven entirely by `tests.support.fake_gemini.
 FakeGeminiClient` + `app.storage.inmemory.InMemoryRunRepository` in tests
 with zero network access. The only two functions that construct a REAL
-network client (`_build_live_gemini_clients`, `_build_run_repository`) are
+network client (`_build_live_gemini_clients`, `build_run_repository`) are
 marked `# VERIFY-LIVE` and are never called by the hermetic test suite --
 only by `live_process_patient_handler`, which is itself only exercised by
 `app.api.routes.get_process_patient_handler`'s production wiring.
@@ -33,6 +33,7 @@ from pathlib import Path
 
 from app.agent.gemini import GeminiInteractionsClient
 from app.agent.protocol import GeminiClient
+from app.api.presentation import build_presentation
 from app.config import Settings, get_settings
 from app.fhir.transport import LocalFixtureTransport
 from app.gate.models import STAGE_ORDER, PatientStage, PatientStatus, is_terminal
@@ -50,6 +51,7 @@ __all__ = [
     "live_process_patient_handler",
     "DemoAppointmentSource",
     "build_live_queue",
+    "build_run_repository",
 ]
 
 #: `app/api/composition.py` -> `app/api` -> `app` -> `app/demo_data`. Packaged
@@ -150,6 +152,15 @@ def run_demo_patient(
         repo=repo,
         run_id=task.run_id,
     )
+
+    # TD-011: persist the UI-shaped presentation payload alongside the
+    # existing private claims/evidence artifacts, regardless of outcome --
+    # a FAILED run's presentation still carries `status`/`stage` so the
+    # frontend's ERROR_STATUSES handling has something to read (spec:
+    # never silent "no findings").
+    presentation = build_presentation(result, patient_name=result.patient_name)
+    repo.upsert_presentation(task.run_id, result.patient_id, presentation)
+
     return _terminal_checkpoint(
         run_id=task.run_id,
         patient_id=task.patient_id,
@@ -177,12 +188,17 @@ def _build_live_gemini_clients(settings: Settings) -> tuple[GeminiClient, Gemini
     return model_a, model_b
 
 
-def _build_run_repository(settings: Settings) -> RunRepository:
+def build_run_repository(settings: Settings) -> RunRepository:
     """Construct the REAL Firestore-backed `RunRepository`.
 
+    Public (not `_`-prefixed, unlike its sibling `_build_live_gemini_clients`)
+    because `app.api.routes.get_run_repository` -- the public `GET
+    /runs/{run_id}` read endpoint's default provider (TD-011) -- also needs
+    it, in addition to `live_process_patient_handler` below.
+
     # VERIFY-LIVE: `firestore.Client(...)` opens a real connection lazily on
-    # first use -- never called by the hermetic test suite, only by
-    # `live_process_patient_handler`.
+    # first use -- never called by the hermetic test suite, only by real
+    # (production) FastAPI dependency providers.
     """
     return FirestoreRunRepository(
         project=settings.gcp_project_id, database=settings.firestore_database
@@ -199,7 +215,7 @@ def live_process_patient_handler(task: RunTask) -> Checkpoint:
     """
     settings = get_settings()
     model_a, model_b = _build_live_gemini_clients(settings)
-    repo = _build_run_repository(settings)
+    repo = build_run_repository(settings)
     return run_demo_patient(
         task, model_a=model_a, model_b=model_b, repo=repo, clock=lambda: datetime.now(UTC)
     )

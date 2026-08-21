@@ -134,3 +134,36 @@ orchestrates, writes the brief, and INDEPENDENTLY verifies (re-runs `make check`
 before committing + tagging. Rationale: save Opus tokens while keeping Opus as architect/verifier. Honors
 SPEC §4 intent (Sonnet implements, Opus does architecture/verification) and logs the real model used per phase.
 Subagents must NOT commit/tag/push — Opus does that after verification.
+
+---
+
+## TD-010 — Demo error-status patients: keep ONE as a labeled "safety demonstration"
+Decision (user, 2026-08-21): the two error-status demo patients (FAILED, DEAD_LETTER) read as "the app is
+broken" to a first-time viewer, but they exist to prove the fail-closed design (a failure surfaces loudly,
+never as a silent "no findings"). Resolution: convert one to a rich SUCCESS case; keep ONE failure, rendered
+inside an explicit "Safety demonstration — how failures surface" section so it is unmistakably an intentional
+feature. Rationale: preserves the safety selling-point without looking buggy.
+
+## TD-011 — "Make the backend visible" = wire the UI to REAL live backend data
+Decision (user, 2026-08-21): add a PUBLIC, read-only backend endpoint `GET /runs/{run_id}` that returns the
+persisted run results from Firestore (status + findings + timeline + lab trends), and make the Next.js
+dashboard fetch and render it — so judges see the ACTUAL AI output from the live pipeline, not built-in mock
+data. Plain: the website shows what the AI really produced. Technical: read-only endpoint (synthetic data, no
+secrets, CORS) over the same Firestore the private worker writes; the write path stays private/OIDC. The UI
+falls back to enriched authored demo data if the backend is unreachable, so it is never broken. The worker
+persists a UI-shaped "presentation" payload at finalize so the read endpoint is a trivial Firestore read.
+
+## TD-012 — Clinical guidelines via PubMed guideline-PUBLICATION-TYPE citations (not guideline text)
+Decision (user, 2026-08-21), with a correction the user asked about: PubMed does NOT provide licensed
+guideline TEXT — it indexes literature, INCLUDING citations to guideline publications (publication type
+"Guideline"). So the honest, licensing-safe approach is to query E-utilities with `ptyp=Guideline` for the
+patient's meds/conditions and surface REAL guideline CITATIONS (title, journal, year, PMID, link) as
+GUIDELINE-tier evidence with `reviewed_by=PENDING`. Because the existing gate caps any PENDING guideline at
+PARTIALLY_VERIFIED, these can never alone make a claim VERIFIED. We copy no guideline body text (licensing).
+This replaces the clearly-labelled placeholder guideline record with real, dynamically-retrieved citations.
+
+## TD-013 — Push to `main` (one-time override of the "user merges main" rule)
+Decision (user, 2026-08-21): the user explicitly instructed pushing to `main`. This overrides the standing
+global rule ("never push main directly; the user merges main") for this occasion only. Executed as a
+fast-forward merge of `dev` into `main` + `git push origin main`, after `dev` is green and pushed. The default
+(dev-only, user merges main) resumes afterward unless the user says otherwise.

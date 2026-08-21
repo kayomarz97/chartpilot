@@ -150,6 +150,7 @@ def run_patient(
             error="no Patient resource with an id found in the fetched bundle",
         )
     patient_id = str(patient_resource["id"])
+    patient_name = _patient_display_name(patient_resource)
     _stage_start = _mark_stage(stage_timings, PatientStage.FETCHING, _stage_start)
 
     # --- NORMALIZING ---
@@ -330,6 +331,10 @@ def run_patient(
         validity_results=tuple(validity_results),
         timeline_events=_build_timeline(patient_index),
         error=None,
+        patient_name=patient_name,
+        normalized_observations=tuple(observations),
+        normalized_medications=tuple(medications),
+        normalized_adverse_reactions=tuple(adverse_reactions),
     )
 
 
@@ -507,6 +512,31 @@ def _age_years(birth_date: str | None, *, now: datetime) -> Decimal | None:
 
 def _sex(gender: str | None) -> str | None:
     return gender if gender in ("male", "female") else None
+
+
+def _patient_display_name(patient_resource: dict[str, object]) -> str:
+    """Best-effort human-readable name from a FHIR `Patient.name` array.
+
+    Prefers the first entry's `text`; otherwise joins `given` + `family`.
+    Returns `""` (never raises) if `Patient.name` is absent/malformed --
+    the presentation layer treats an empty name as "unknown", never a
+    fabricated placeholder.
+    """
+    names = patient_resource.get("name")
+    if not isinstance(names, list) or not names:
+        return ""
+    first = names[0]
+    if not isinstance(first, dict):
+        return ""
+    text = first.get("text")
+    if isinstance(text, str) and text.strip():
+        return text.strip()
+    given = first.get("given")
+    given_str = " ".join(g for g in given if isinstance(g, str)) if isinstance(given, list) else ""
+    family = first.get("family")
+    family_str = family if isinstance(family, str) else ""
+    full = " ".join(part for part in (given_str, family_str) if part)
+    return full
 
 
 def _evaluate_validity_metrics(

@@ -1,6 +1,6 @@
 {
   "created_at": "2026-08-20T13:38:37.903932Z",
-  "manifest_hash": "d74a08a19d92639b5dadeded1f4d94bbd4d2b2b6f05f28da56b7f1c23e65556f",
+  "manifest_hash": "488c96ec02a1ed33a7d7829494411f399cf7cee3488cf6bfd8544bceb0aa447c",
   "records": [
     {
       "content": "6 ADVERSE REACTIONS The following adverse reactions are described elsewhere: Angioedema [see Warnings and Precautions (5.2) ] Hypotension [see Warnings and Precautions (5.3) ] Hepatic failure [see Warnings and Precautions (5.4) ] Renal impairment [see Warnings and Precautions (5.5) ] Hyperkalemia [see Warnings and Precautions (5.6) ] The most common adverse reaction for patients treated for hypertension (\u22653%) was fatigue. ( 6.1 ) The most common adverse reactions for patients treated for heart failure (>6%) were hypotension and dizziness. ( 6.1 ) To report SUSPECTED ADVERSE REACTIONS, contact Amneal Pharmaceuticals at 1-877-835-5472 or FDA at 1-800-FDA-1088 or www.fda.gov/medwatch. 6.1 Clinical Trials Experience Because clinical trials are conducted under widely varying conditions, adverse reaction rates observed in clinical trials of a drug cannot be directly compared to rates in the clinical trials of another drug and may not reflect the rates observed in clinical practice. Enalapril has been evaluated for safety in more than 10,000 patients, including over 1,000 patients treated for one year or more. In clinical trials, discontinuation of therapy for clinical adverse experiences was required in 3.3% of patients with hypertension and in 5.7% of patients with heart failure. Hypertension Adverse reactions (where rate on enalapril exceeds the rate on placebo by at least 0.2%) occurring in greater than 1% of patients with hypertension treated with enalapril in controlled clinical trials are shown below. In patients treated with enalapril, the maximum duration of therapy was three years; in placebo treated patients, the maximum duration of therapy was 12 weeks. Adverse Reactions Occurring in Greater Than 1% of Patients With Hypertension Enalapril Maleate Tablets (n = 2,314) Incidence (discontinuation) Placebo (n = 230) Incidence Body As A Whole Fatigue 3 (<0.1) 2.6 Orthostatic Effects 1.2 (<0.1) 0 Asthenia 1.1 (0.1) 0.9 Respiratory Cough 1.3 (0.1) 0.9 Skin Rash 1.4 (0.4) 0.4 Heart Failure Adverse reactions seen in clinical trials of heart failure were similar to those seen in clinical trials for hypertension. In patients treated for heart failure, there was an increased incidence of hypotension 6.7 percent versus 0.6 percent in placebo and dizziness 7.9 percent versus 0.6 percent in placebo. 6.2 Other Adverse Reactions from Clinical Studies or Postmarketing Experience The following adverse reactions have been reported in clinical studies or postmarketing experience with enalapril. Because some of these reactions were reported voluntarily from a population of uncertain size, it is not always possible to reliably estimate their frequency or establish a causal relationship to drug exposure. Other serious clinical adverse experiences occurring since the drug was marketed or adverse experiences occurring in 0.5% to 1% of patients with hypertension or heart failure in clinical trials are listed below and, within each category, are in order of decreasing severity. Cardiovascular: Cardiac arrest; myocardial infarction or cerebrovascular accident, possibly secondary to excessive hypotension in high risk patients [see Warnings and Precautions (5.3) ] ; pulmonary embolism and infarction; pulmonary edema; rhythm disturbances, including atrial tachycardia and bradycardia; atrial fibrillation; palpitation; Raynaud's phenomenon. Digestive: Ileus, pancreatitis, melena, anorexia, dyspepsia, constipation, glossitis, stomatitis, dry mouth. Hematologic: Rare cases of neutropenia, thrombocytopenia, and bone marrow depression. Musculoskeletal: Muscle cramps. Nervous/Psychiatric: Depression, confusion, ataxia, somnolence, insomnia, nervousness, peripheral neuropathy (e.g., paresthesia, dysesthesia), dream abnormality. Respiratory: Bronchospasm, rhinorrhea, sore throat and hoarseness, asthma, upper respiratory infection, pulmonary infiltrates, eosinophilic pneumonitis. Skin: Exfoliative dermatitis, toxic epidermal necrolysis, Stevens-Johnson syndrome, pemphigus, herpes zoster, erythema multiforme, urticaria, pruritus, alopecia, flushing, diaphoresis, photosensitivity. Special Senses: Blurred vision, taste alteration, anosmia, tinnitus, conjunctivitis, dry eyes, tearing. Urogenital: Flank pain, gynecomastia, impotence. Miscellaneous: A symptom complex has been reported which may include some or all of the following: a positive ANA, an elevated erythrocyte sedimentation rate, arthralgia/arthritis, myalgia/myositis, fever, serositis, vasculitis, leukocytosis, eosinophilia, photosensitivity, dermatologic manifestations.",
@@ -57,7 +57,64 @@
       "tier": "guideline",
       "title": "DEMO PLACEHOLDER \u2014 hyperkalemia monitoring",
       "version": "0-placeholder"
+    },
+    {
+      "content": "Recurrent hyperkalaemia (HK) is associated with increased morbidity and mortality, and is common among patients with cardiorenal disease. Many of these patients require renin-angiotensin-aldosterone system inhibitor (RAASi) therapies that further enhance the risk of HK. Every acute HK episode constitutes an opportunity to treat and prevent recurrent HK. This report aims to support multidisciplinary team efforts in managing patients who may be affected by recurrent HK. A panel of nine European experts in the management of HK (four nephrologists, four cardiologists, one internist) reviewed existing guidance and evidence on the diagnosis and management of HK at a face-to-face (26th September 2023) and two virtual meetings (24th January and 14th March 2024). The panel developed 10 consensus recommendations and a management algorithm across three domains: duty of care, identifying patients at risk of HK recurrence and managing the risk of HK recurrence. Early identification and management of those at risk of recurrent HK will improve clinical outcomes but requires an interdisciplinary, co-ordinated approach. Disease-modifying therapies such as RAASi should no longer be considered reversible causes of HK, and efforts should be taken to up-titrate these to guideline-directed target doses even in the setting of an acute HK event. Every acute HK episode constitutes an opportunity to treat and prevent recurrent HK, contributing to long-term clinical benefits. The recommendations, intentionally broad in scope, complement existing management guidelines and plans, fostering a collective responsibility among healthcare professionals managing patients with HK.",
+      "content_hash": "081a9e875f078843ad1aa1ae2664d20c581dadd5c6aa6d915212d5644d046888",
+      "id": "pubmed_guideline:40685253",
+      "jurisdiction": "not_applicable",
+      "metadata": {
+        "doi": "10.1093/ehjcvp/pvaf055",
+        "mesh": "Humans,Biomarkers,Clinical Decision-Making,Europe,Hyperkalemia,Patient Care Team,Potassium,Recurrence,Risk Assessment,Risk Factors,Secondary Prevention,Treatment Outcome",
+        "publication_types": "Consensus Statement,Journal Article,Practice Guideline",
+        "reviewed_by": "PENDING"
+      },
+      "publication_date": "2025",
+      "publisher": "European heart journal. Cardiovascular pharmacotherapy",
+      "retrieved_at": "2026-08-21T20:12:54.002102Z",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/40685253/",
+      "tier": "guideline",
+      "title": "Interdisciplinary recommendations for recurrent hyperkalaemia: insights from the GUARDIAN-HK European Steering Committee.",
+      "version": null
+    },
+    {
+      "content": "The Kidney Disease: Improving Global Outcomes (KDIGO) 2021 Clinical Practice Guideline for the Management of Blood Pressure in Chronic Kidney Disease for patients not receiving dialysis represents an update to the KDIGO 2012 guideline on this topic. Development of this guideline update followed a rigorous process of evidence review and appraisal. Guideline recommendations are based on systematic reviews of relevant studies and appraisal of the quality of the evidence. The strength of recommendations is based on the \"Grading of Recommendations Assessment, Development and Evaluation\" (GRADE) approach. The scope includes topics covered in the original guideline, such as optimal blood pressure targets, lifestyle interventions, antihypertensive medications, and specific management in kidney transplant recipients and children. Some aspects of general and cardiovascular health, such as lipid and smoking management, are excluded. This guideline also introduces a chapter dedicated to proper blood pressure measurement since all large randomized trials targeting blood pressure with pivotal outcomes used standardized preparation and measurement protocols adhered to by patients and clinicians. Based on previous and new evidence, in particular the Systolic Blood Pressure Intervention Trial (SPRINT) results, we propose a systolic blood pressure target of less than 120 mm\u00a0Hg using standardized office reading for most people with chronic kidney disease (CKD) not receiving dialysis, the exception being children and kidney transplant recipients. The goal of this guideline is to provide clinicians and patients a useful resource with actionable recommendations supplemented with practice points. The burden of the recommendations on patients and resources, public policy implications, and limitations of the evidence are taken into consideration. Lastly, knowledge gaps and recommendations for future research are provided.",
+      "content_hash": "299de19c826418cbeac82cb14261568c6ecf2058b070b75a9e4e166f7a3b1159",
+      "id": "pubmed_guideline:33637203",
+      "jurisdiction": "not_applicable",
+      "metadata": {
+        "doi": "10.1016/j.kint.2020.10.026",
+        "mesh": "Antihypertensive Agents,Blood Pressure,Child,Humans,Life Style,Renal Dialysis,Renal Insufficiency, Chronic",
+        "publication_types": "Practice Guideline,Journal Article",
+        "reviewed_by": "PENDING"
+      },
+      "publication_date": "2021",
+      "publisher": "Kidney international",
+      "retrieved_at": "2026-08-21T20:12:54.002102Z",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/33637203/",
+      "tier": "guideline",
+      "title": "Executive summary of the KDIGO 2021 Clinical Practice Guideline for the Management of Blood Pressure in Chronic Kidney Disease.",
+      "version": null
+    },
+    {
+      "content": "Renal function is often affected in patients with chronic heart failure with reduced ejection fraction (HFrEF). The complex interplay between heart and renal dysfunction makes renal function and potassium monitoring mandatory. Renin-angiotensin-aldosterone system (RAAS) blockers are a life-saving treatment for patients with HFrEF, regardless of worsening renal function. Uptitration to the maximum-tolerated dose should be a constant goal. This simple fact is all too often forgotten (only 30% of patients with heart failure receive the target dosage of RAAS blockers), and the RAAS blocker effect on renal function is sometimes misunderstood. RAAS blockers are not nephrotoxic drugs as they only have a functional effect on renal function. In many routine clinical cases, RAAS blockers are withheld or stopped because of this misunderstanding, combined with suboptimal assessment of the clinical situation and underestimation of the life-saving effect of RAAS blockers despite worsening renal function. In this expert panel, which includes heart failure specialists, geriatricians and nephrologists, we propose therapeutic management algorithms for worsening renal function for physicians in charge of outpatients with chronic heart failure. Firstly, the essential variables to take into consideration before changing treatment are the presence of concomitant disorders that could alter renal function status (e.g. infection, diarrhoea, hyperthermia), congestion/dehydration status, blood pressure and intake of nephrotoxic drugs. Secondly, physicians are invited to adapt medication according to four clinical scenarios (patient with congestion, dehydration, hypotension or hyperkalaemia). Close biological monitoring after treatment modification is mandatory. We believe that this practical clinically minded management algorithm can help to optimize HFrEF treatment in routine clinical practice.",
+      "content_hash": "0e804d409037c0c950b82dad2604f0f7a07fdc678a7c014f3bb20a1320d9b38e",
+      "id": "pubmed_guideline:32660835",
+      "jurisdiction": "not_applicable",
+      "metadata": {
+        "doi": "10.1016/j.acvd.2020.03.018",
+        "mesh": "Ambulatory Care,Angiotensin Receptor Antagonists,Angiotensin-Converting Enzyme Inhibitors,Cardio-Renal Syndrome,Cardiology,Chronic Disease,Consensus,Disease Progression,Heart Failure,Humans,Kidney,Kidney Diseases,Mineralocorticoid Receptor Antagonists,Nephrology,Recovery of Function,Renin-Angiotensin System,Stroke Volume,Treatment Outcome,Ventricular Function, Left",
+        "publication_types": "Journal Article,Practice Guideline,Review",
+        "reviewed_by": "PENDING"
+      },
+      "publication_date": "2020",
+      "publisher": "Archives of cardiovascular diseases",
+      "retrieved_at": "2026-08-21T20:12:54.002102Z",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/32660835/",
+      "tier": "guideline",
+      "title": "Practical management of worsening renal function in outpatients with heart failure and reduced ejection fraction: Statement from a panel of multidisciplinary experts and the Heart Failure Working Group of the French Society of Cardiology.",
+      "version": null
     }
   ],
-  "snapshot_id": "ebe894943f90727b"
+  "snapshot_id": "6af4751313fe6a80"
 }

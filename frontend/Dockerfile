@@ -4,10 +4,15 @@
 # `docker build -f frontend/Dockerfile frontend/`) so `frontend/.dockerignore`
 # is auto-discovered from the context root.
 #
-# This app renders entirely from baked-in mock data (`lib/mockData.ts`) --
-# no backend calls, no env vars, no secrets. It is a self-contained public
-# demo UI, so the image needs nothing injected at build or run time beyond
-# Cloud Run's `PORT`.
+# TD-011: the app attempts a live fetch against NEXT_PUBLIC_BACKEND_URL at
+# runtime (client-side) and gracefully falls back to the baked-in mock data
+# (`lib/mockData.ts`) whenever that's unset, unreachable, or times out -- so
+# it always renders correctly with zero backend calls, zero env vars, and
+# zero secrets, and just as correctly once a real backend is wired up.
+# NEXT_PUBLIC_* vars are inlined into the client bundle by `next build`, so
+# this one must be supplied as a build ARG (not a runtime-only ENV) -- pass
+# `--build-arg NEXT_PUBLIC_BACKEND_URL=https://...` at deploy time; default
+# empty keeps the image in pure demo mode.
 #
 # Multi-stage: `deps` installs the pinned dependency set with `pnpm` from
 # `pnpm-lock.yaml` (no devDependencies pruning needed here since the build
@@ -53,7 +58,12 @@ RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# No env vars / secrets needed -- the app renders from baked-in mock data.
+# Baked into the client bundle at build time (see TD-011 note above).
+# Default empty -- no backend, no secret, pure demo mode -- unless a
+# deliberate `--build-arg` overrides it.
+ARG NEXT_PUBLIC_BACKEND_URL=""
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+
 RUN pnpm build
 
 # This app currently ships no public/ dir. Guarantee it exists so the

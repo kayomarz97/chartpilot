@@ -99,6 +99,22 @@ export interface TimelineEvent {
   severity?: Severity;
 }
 
+/** Flag on a single lab result relative to its reference range, or null if within range. */
+export type LabFlag = "HIGH" | "LOW" | "CRITICAL" | null;
+
+export interface LabPoint {
+  date: string;
+  value: number;
+  flag?: LabFlag;
+}
+
+/** A single analyte's result history — the basis for the manual-review trend sparklines. */
+export interface LabTrend {
+  analyte: string;
+  unit: string;
+  points: LabPoint[];
+}
+
 export interface PatientRun {
   runId: string;
   patientId: string;
@@ -107,6 +123,7 @@ export interface PatientRun {
   stage: string;
   findings: Finding[];
   timeline: TimelineEvent[];
+  labs: LabTrend[];
 }
 
 export function isErrorStatus(status: RunStatus): boolean {

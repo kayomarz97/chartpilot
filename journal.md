@@ -1,8 +1,41 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 21 COMPLETE + DEPLOYED (2026-08-22) — enrich demo, wire UI↔live backend, PubMed guidelines, README.
+PHASE 21 (4 Sonnet workstreams built, Opus verified+integrated+deployed; decisions TD-010..013):
+  - ENRICHED demo FHIR bundles (23–40 resources each, multi-year lab trends) + byte-identical tests/fixtures;
+    precomputed_run regenerated via generator. (make check green.)
+  - BACKEND public read endpoint GET /runs/{id} + presentation payload (app/api/presentation.py, camelCase UI
+    shape, status/verdict/severity UPPERCASED to match frontend enums) persisted at runs/{id}/presentations/{pid};
+    PatientRunResult extended additively; CORS. (332 tests.)
+  - FRONTEND: enriched mockData (long histories+labs), MRN-83562 DEAD_LETTER→rich success, MRN-77241 FAILED kept
+    under labeled "Safety demonstration"; collapsible ManualReviewPanel (history + labs sparklines, a11y);
+    live-data wiring w/ robust fallback.
+  - PubMed GUIDELINE citations (TD-012): app/evidence/guideline_citations.py (`AND "guideline"[Publication Type]`),
+    GUIDELINE-tier + reviewed_by=PENDING (gate caps at PARTIALLY_VERIFIED); 3 REAL citations live-fetched into demo
+    snapshot (PMIDs 40685253, 33637203 KDIGO-2021, 32660835); no fabrication; fixed a real PubMed throttle bug. (338 tests.)
+  - README fully overhauled (dual-register, 3 mermaid flowcharts, "why this wins", the AI-agent-build story).
+    TECHNICAL_DECISIONS TD-010..013 added.
+SECURE LIVE-DATA ARCHITECTURE (changed from the naive plan mid-integration): backend stays PRIVATE
+  (--no-allow-unauthenticated) — a public endpoint on it 403s. So the PUBLIC frontend proxies reads server-side:
+  frontend/app/api/runs/route.ts mints an OIDC identity token (metadata server, audience=backend URL) as a
+  dedicated chartpilot-frontend-sa (run.invoker on backend) and calls the private backend; browser hits
+  same-origin /api/runs. PROVEN LIVE: /api/runs returns backend data (200). Frontend redeployed (rev 2) with
+  BACKEND_URL env + the SA (infra/70_deploy_frontend.sh updated). Backend redeployed rev 6 (IMAGE_TAG v3).
+⚠️ BLOCKER (USER ACTION): the ChartPilot Gemini API key hit its MONTHLY SPEND CAP — confirmed 429 "project has
+  exceeded its monthly spending cap" with the ambient Iatronix GOOGLE_API_KEY unset, so it is OUR chartpilot Gemini
+  project's cap, NOT Iatronix. So runs/demo currently = 5 FAILED presentations. The UI's fallback was hardened to
+  fall back to demo data unless ≥1 live patient is non-error, so the site shows the polished demo now and flips to
+  "Live data" automatically once the cap is raised + the demo run re-triggered. USER must raise cap at
+  https://ai.studio/spend (or wait for monthly reset), then re-run: scheduler body {"run_id":"demo"} → trigger.
+LIVE URLs (unchanged): frontend https://chartpilot-frontend-zkhsg5lcca-el.a.run.app ; backend (private)
+  https://chartpilot-api-zkhsg5lcca-el.a.run.app . Both healthy. Ambient-key hazard (TD-002) re-confirmed: local
+  runs must `unset GOOGLE_API_KEY`; deployed Cloud Run is clean (only GEMINI_API_KEY from Secret Manager).
+Next action: commit phase-21 on dev + tag phase-21; push dev; MERGE dev→main + push main (TD-013). Then user:
+  raise Gemini spend cap + rotate key + re-run demo; record video; make repo public/share; submit Devpost.
+--- Phase 18B+19 LIVE DEPLOY detail (superseded header) ---
 Phase: 18B + 19 DEPLOYED LIVE TO chartpilot-agentic (2026-08-21) — full chain PROVEN on real infra.
-LIVE DEPLOY (Opus ran infra/ 00→50 as kayomarz97@gmail.com; guardrail confirmed active gcloud project was
+LIVE DEPLOY (Opus ran infra/ 00→50 as the project owner via gcloud auth; guardrail confirmed active gcloud project was
   iatronix-med-search-v1 but every cmd pinned --project=chartpilot-agentic → Iatronix untouched, TD-002 held):
   - Service LIVE + PRIVATE: https://chartpilot-api-zkhsg5lcca-el.a.run.app  (region asia-south1, --no-allow-unauth).
     /health → 200. Runtime SA chartpilot-run-sa (datastore.user + secretAccessor); invoker SA

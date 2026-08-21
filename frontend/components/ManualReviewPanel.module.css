@@ -1,0 +1,254 @@
+.wrap {
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.headingWrap {
+  margin: 0;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 1.1rem 1.4rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.trigger:hover {
+  background: var(--surface-3);
+}
+
+.triggerText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.triggerLabel {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.triggerHint {
+  font-size: 0.82rem;
+  color: var(--on-surface-muted);
+  font-weight: 400;
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--on-surface-variant);
+  transform: rotate(90deg);
+  transition: transform var(--motion-base) var(--easing-standard);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--motion-base) var(--easing-standard);
+}
+
+.content[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.contentInner {
+  overflow: hidden;
+  min-height: 0;
+  padding: 0 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.content[data-open="true"] .contentInner {
+  padding-bottom: 1.5rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sectionHeading {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--on-surface-variant);
+  padding-top: 1rem;
+  border-top: 1px solid var(--outline);
+}
+
+.section:first-child .sectionHeading {
+  border-top: none;
+  padding-top: 0;
+}
+
+.empty {
+  color: var(--on-surface-muted);
+  font-size: 0.9rem;
+}
+
+.labList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.labRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface-3);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.labInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.labAnalyteRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.labAnalyte {
+  font-weight: 650;
+  font-size: 0.92rem;
+}
+
+.labValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.labValue {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.labUnit {
+  font-weight: 500;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.labDate {
+  color: var(--on-surface-muted);
+  font-size: 0.78rem;
+}
+
+.flagTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.flagNormal {
+  color: var(--on-surface-variant);
+}
+
+.flagHigh.flagTag,
+.flagLow.flagTag {
+  background: var(--moderate-bg);
+  color: var(--moderate-fg);
+  border-color: var(--moderate-border);
+}
+
+.flagHigh {
+  color: var(--moderate-fg);
+}
+
+.flagLow {
+  color: var(--low-fg);
+}
+
+.flagLow.flagTag {
+  background: var(--low-bg);
+  color: var(--low-fg);
+  border-color: var(--low-border);
+}
+
+.flagCritical {
+  color: var(--critical-fg);
+}
+
+.flagCritical.flagTag {
+  background: var(--critical-bg);
+  color: var(--critical-fg);
+  border-color: var(--critical-border);
+}
+
+.sparkline {
+  flex-shrink: 0;
+  color: var(--on-surface-variant);
+  overflow: visible;
+}
+
+.sparklineLine {
+  stroke: currentColor;
+  opacity: 0.6;
+}
+
+.sparklineDotMuted {
+  fill: currentColor;
+  opacity: 0.5;
+}
+
+.sparklineDot {
+  stroke: var(--surface-3);
+  stroke-width: 1.5;
+}
+
+.sparklineDot.flagNormal {
+  fill: var(--verified-fg);
+}
+
+.sparklineDot.flagHigh {
+  fill: var(--moderate-fg);
+}
+
+.sparklineDot.flagLow {
+  fill: var(--low-fg);
+}
+
+.sparklineDot.flagCritical {
+  fill: var(--critical-fg);
+}

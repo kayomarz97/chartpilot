@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPatientById, patients } from "@/lib/mockData";
-import { PatientView } from "@/components/PatientView";
+import { PatientDetailClient } from "@/components/PatientDetailClient";
 
 export function generateStaticParams() {
   return patients.map((p) => ({ id: p.patientId }));
@@ -16,5 +16,8 @@ export default async function PatientPage({
   if (!patient) {
     notFound();
   }
-  return <PatientView patient={patient} />;
+  // Server-resolved mock fallback guarantees an instant, always-valid
+  // render; PatientDetailClient then attempts to swap in the live backend
+  // run for this patient id (TD-011) without ever risking a broken page.
+  return <PatientDetailClient patientId={id} fallback={patient} />;
 }

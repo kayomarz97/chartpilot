@@ -16,6 +16,9 @@ from pydantic import BaseModel, ConfigDict
 from app.agent.models import Claim
 from app.citation.models import CitationResult
 from app.gate.models import ClaimVerdict, CommitStatus, PatientStage, PatientStatus
+from app.normalize.adr import NormalizedAdverseReaction
+from app.normalize.medication import NormalizedMedicationOrder
+from app.normalize.models import NormalizedObservation
 from app.review.models import ModelBVerdict
 from app.rules.models import RuleResult
 from app.validation.models import ValidityResult
@@ -52,6 +55,17 @@ class PatientRunResult(BaseModel):
     `summary.status == PatientStatus.FAILED` -- a failure is never silent
     (spec: "a FHIR/normalize error -> the run ends FAILED, never silently
     'no findings'").
+
+    `patient_name`/`normalized_observations`/`normalized_medications`/
+    `normalized_adverse_reactions` (TD-011) are ADDITIVE, defaulted fields:
+    `run_patient` already computes all of these locally, so populating them
+    costs nothing new, and every existing caller/test that constructs a
+    `PatientRunResult` without them (or calls `run_patient` and only reads
+    the pre-existing fields) is byte-for-byte unaffected. They exist so
+    `app.api.presentation.build_presentation` can build the UI-shaped
+    payload without re-deriving normalized facts from raw FHIR a second
+    time. Left at their defaults (empty) on a FAILED run, matching
+    `findings`/`rule_results`/etc.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -63,3 +77,7 @@ class PatientRunResult(BaseModel):
     validity_results: tuple[ValidityResult, ...]
     timeline_events: tuple[str, ...]
     error: str | None = None
+    patient_name: str = ""
+    normalized_observations: tuple[NormalizedObservation, ...] = ()
+    normalized_medications: tuple[NormalizedMedicationOrder, ...] = ()
+    normalized_adverse_reactions: tuple[NormalizedAdverseReaction, ...] = ()

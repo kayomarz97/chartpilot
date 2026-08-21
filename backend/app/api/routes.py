@@ -11,15 +11,24 @@
   same terminal checkpoint. A `RetryableStageError` propagating out of the
   handler is deliberately left uncaught: FastAPI turns it into a 500, which
   is exactly the signal Cloud Tasks needs to redeliver with `attempt + 1`.
+- `GET /runs/{run_id}` -- PUBLIC, read-only (TD-011, no `require_oidc`):
+  returns every patient's UI-shaped presentation payload
+  (`app.api.presentation.build_presentation`) persisted for `run_id`. Safe
+  to expose unauthenticated because the payload is synthetic demo-patient
+  output with no secrets, and this route can only READ what
+  `run_demo_patient` already wrote -- it has no write path of its own.
 
-Both endpoints are protected by `require_oidc` (spec §76A.1) and get their
-collaborators (`appointment_source`, `queue`, `clock`,
+Both OIDC endpoints are protected by `require_oidc` (spec §76A.1) and get
+their collaborators (`appointment_source`, `queue`, `clock`,
 `process_patient_handler`) through FastAPI dependencies so tests can swap in
-hermetic fakes via `app.dependency_overrides`. The real (production) default
-providers wire the live composition root in `app.api.composition` (real
-Gemini + real Firestore + real Cloud Tasks, Phase 19) -- every network-
-touching construction is isolated behind that module's `# VERIFY-LIVE`
-markers, so this module itself stays free of any direct network dependency.
+hermetic fakes via `app.dependency_overrides`. `GET /runs/{run_id}` follows
+the same injectable-provider pattern (`get_run_repository`) for the same
+testability reason, just without an auth dependency. The real (production)
+default providers wire the live composition root in `app.api.composition`
+(real Gemini + real Firestore + real Cloud Tasks, Phase 19) -- every
+network-touching construction is isolated behind that module's
+`# VERIFY-LIVE` markers, so this module itself stays free of any direct
+network dependency.
 """
 
 from __future__ import annotations
@@ -35,9 +44,11 @@ from app.api.auth import require_oidc
 from app.api.composition import (
     DemoAppointmentSource,
     build_live_queue,
+    build_run_repository,
     live_process_patient_handler,
 )
 from app.config import get_settings
+from app.storage.repository import RunRepository
 from app.tasks.appointments import AppointmentSource
 from app.tasks.enqueue import EnqueueResult, enqueue_run
 from app.tasks.models import Checkpoint, RunTask
@@ -137,3 +148,50 @@ def process_patient_endpoint(
     reprocessing.
     """
     return handler(task)
+
+
+# --------------------------------------------------------------------------
+# GET /runs/{run_id} -- public, read-only presentation payload (TD-011)
+# --------------------------------------------------------------------------
+
+
+class RunPresentationsResponse(BaseModel):
+    """Body of `GET /runs/{run_id}`. `patients` holds one
+    `app.api.presentation.build_presentation`-shaped dict per patient
+    persisted for this run; `generated_at` is intentionally `None` -- this
+    endpoint never calls a clock, it only reads back what was already
+    persisted at finalize time."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str
+    generated_at: str | None
+    patients: list[dict[str, Any]]
+
+
+def get_run_repository() -> RunRepository:
+    """Real (production) `RunRepository` provider for `GET /runs/{run_id}`.
+
+    Builds the real Firestore-backed repository (`app.api.composition.
+    build_run_repository`, `# VERIFY-LIVE`) -- never called by the hermetic
+    test suite. Tests MUST override this via
+    `app.dependency_overrides[get_run_repository]` with an in-memory repo.
+    """
+    return build_run_repository(get_settings())
+
+
+@router.get("/runs/{run_id}", response_model=RunPresentationsResponse)
+def get_run_presentations(
+    run_id: str,
+    repo: Annotated[RunRepository, Depends(get_run_repository)],
+) -> RunPresentationsResponse:
+    """PUBLIC, read-only: every patient's persisted presentation payload for
+    `run_id`. No `require_oidc` dependency -- see module docstring for why
+    this is safe to expose unauthenticated. `patients` is `[]` (not a 404)
+    for an unknown/not-yet-finalized `run_id`, matching `list_presentations`'
+    own "nothing persisted yet" contract rather than treating an empty run
+    as an error.
+    """
+    return RunPresentationsResponse(
+        run_id=run_id, generated_at=None, patients=repo.list_presentations(run_id)
+    )

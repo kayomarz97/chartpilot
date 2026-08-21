@@ -19,9 +19,36 @@
       "stage": "persisted",
       "status": "completed",
       "timeline": [
+        "observation obs-a-creat-2023-08: effective='2023-08-15T09:00:00+00:00' status=final value=1.1 mg/dL",
+        "observation obs-a-creat-2024-02: effective='2024-02-15T09:00:00+00:00' status=final value=1.2 mg/dL",
+        "observation obs-a-creat-2024-08: effective='2024-08-15T09:00:00+00:00' status=final value=1.3 mg/dL",
+        "observation obs-a-creat-2025-02: effective='2025-02-15T09:00:00+00:00' status=final value=1.4 mg/dL",
+        "observation obs-a-creat-2025-05: effective='2025-05-15T09:00:00+00:00' status=final value=1.5 mg/dL",
+        "observation obs-a-creat-2025-08: effective='2025-08-15T09:00:00+00:00' status=final value=1.6 mg/dL",
+        "observation obs-a-creat-2025-11: effective='2025-11-15T09:00:00+00:00' status=final value=1.7 mg/dL",
+        "observation obs-a-creat-2026-02: effective='2026-02-15T09:00:00+00:00' status=final value=1.75 mg/dL",
+        "observation obs-a-creat-2026-05: effective='2026-05-15T09:00:00+00:00' status=final value=1.78 mg/dL",
         "observation obs-a-creat1: effective='2026-08-18T09:00:00+00:00' status=final value=1.8 mg/dL",
+        "observation obs-a-k-2023-08: effective='2023-08-15T09:00:00+00:00' status=final value=4.2 mmol/L",
+        "observation obs-a-k-2024-02: effective='2024-02-15T09:00:00+00:00' status=final value=4.4 mmol/L",
+        "observation obs-a-k-2024-08: effective='2024-08-15T09:00:00+00:00' status=final value=4.6 mmol/L",
+        "observation obs-a-k-2025-02: effective='2025-02-15T09:00:00+00:00' status=final value=4.8 mmol/L",
+        "observation obs-a-k-2025-05: effective='2025-05-15T09:00:00+00:00' status=final value=5.0 mmol/L",
+        "observation obs-a-k-2025-08: effective='2025-08-15T09:00:00+00:00' status=final value=5.3 mmol/L",
+        "observation obs-a-k-2025-11: effective='2025-11-15T09:00:00+00:00' status=final value=5.6 mmol/L",
+        "observation obs-a-k-2026-02: effective='2026-02-15T09:00:00+00:00' status=final value=5.9 mmol/L",
+        "observation obs-a-k-2026-05: effective='2026-05-15T09:00:00+00:00' status=final value=6.0 mmol/L",
         "observation obs-a-k1: effective='2026-08-18T09:00:00+00:00' status=final value=6.2 mmol/L",
-        "medication med-a-1: authored_on='2025-09-01T00:00:00+00:00' status=active"
+        "observation obs-a-na-2023-08: effective='2023-08-15T09:00:00+00:00' status=final value=140 mmol/L",
+        "observation obs-a-na-2024-08: effective='2024-08-15T09:00:00+00:00' status=final value=139 mmol/L",
+        "observation obs-a-na-2025-08: effective='2025-08-15T09:00:00+00:00' status=final value=137 mmol/L",
+        "observation obs-a-na-2026-05: effective='2026-05-15T09:00:00+00:00' status=final value=136 mmol/L",
+        "observation obs-a-na-2026-08: effective='2026-08-18T09:00:00+00:00' status=final value=135 mmol/L",
+        "medication med-a-1: authored_on='2025-09-01T00:00:00+00:00' status=active",
+        "medication med-a-2: authored_on='2021-06-05T00:00:00+00:00' status=active",
+        "medication med-a-3: authored_on='2022-01-15T00:00:00+00:00' status=active",
+        "medication med-a-4: authored_on='2022-01-15T00:00:00+00:00' status=active",
+        "medication med-a-5: authored_on='2026-02-20T00:00:00+00:00' status=active"
       ]
     },
     {
@@ -42,9 +69,26 @@
       "stage": "persisted",
       "status": "completed",
       "timeline": [
+        "observation obs-b-creat-2023-08: effective='2023-08-01T08:00:00+00:00' status=final value=1.0 mg/dL",
+        "observation obs-b-creat-2024-08: effective='2024-08-01T08:00:00+00:00' status=final value=1.0 mg/dL",
+        "observation obs-b-creat-2025-08: effective='2025-08-01T08:00:00+00:00' status=final value=1.1 mg/dL",
+        "observation obs-b-creat-2026-06: effective='2026-06-01T08:00:00+00:00' status=final value=1.9 mg/dL",
+        "observation obs-b-creat-2026-08: effective='2026-08-15T08:00:00+00:00' status=final value=1.0 mg/dL",
+        "observation obs-b-k-2023-08: effective='2023-08-01T08:00:00+00:00' status=final value=4.3 mmol/L",
+        "observation obs-b-k-2024-02: effective='2024-02-01T08:00:00+00:00' status=final value=4.4 mmol/L",
+        "observation obs-b-k-2024-08: effective='2024-08-01T08:00:00+00:00' status=final value=4.2 mmol/L",
+        "observation obs-b-k-2025-02: effective='2025-02-01T08:00:00+00:00' status=final value=4.5 mmol/L",
+        "observation obs-b-k-2025-08: effective='2025-08-01T08:00:00+00:00' status=final value=4.3 mmol/L",
+        "observation obs-b-k-2026-02: effective='2026-02-01T08:00:00+00:00' status=final value=4.4 mmol/L",
+        "observation obs-b-k-2026-07: effective='2026-07-05T08:00:00+00:00' status=final value=4.8 mmol/L",
         "observation obs-b-k-new: effective='2026-08-15T08:00:00+00:00' status=final value=4.1 mmol/L",
         "observation obs-b-k-old: effective='2026-06-01T08:00:00+00:00' status=final value=6.3 mmol/L",
-        "medication med-b-1: authored_on='2026-05-01T00:00:00+00:00' status=active"
+        "observation obs-b-na-2023-08: effective='2023-08-01T08:00:00+00:00' status=final value=140 mmol/L",
+        "observation obs-b-na-2025-02: effective='2025-02-01T08:00:00+00:00' status=final value=139 mmol/L",
+        "observation obs-b-na-2026-06: effective='2026-06-01T08:00:00+00:00' status=final value=133 mmol/L",
+        "observation obs-b-na-2026-08: effective='2026-08-15T08:00:00+00:00' status=final value=140 mmol/L",
+        "medication med-b-1: authored_on='2026-05-01T00:00:00+00:00' status=active",
+        "medication med-b-2: authored_on='2020-03-05T00:00:00+00:00' status=active"
       ]
     },
     {
@@ -65,8 +109,22 @@
       "stage": "persisted",
       "status": "flagged_for_review",
       "timeline": [
+        "observation obs-c-creat-2023-09: effective='2023-09-01T08:00:00+00:00' status=final value=0.9 mg/dL",
+        "observation obs-c-creat-2024-09: effective='2024-09-01T08:00:00+00:00' status=final value=0.9 mg/dL",
+        "observation obs-c-creat-2025-09: effective='2025-09-01T08:00:00+00:00' status=final value=1.0 mg/dL",
+        "observation obs-c-creat-2026-03: effective='2026-03-01T08:00:00+00:00' status=final value=1.0 mg/dL",
+        "observation obs-c-k-2023-09: effective='2023-09-01T08:00:00+00:00' status=final value=4.0 mmol/L",
+        "observation obs-c-k-2024-03: effective='2024-03-01T08:00:00+00:00' status=final value=4.1 mmol/L",
+        "observation obs-c-k-2024-09: effective='2024-09-01T08:00:00+00:00' status=final value=4.2 mmol/L",
+        "observation obs-c-k-2025-03: effective='2025-03-01T08:00:00+00:00' status=final value=4.3 mmol/L",
+        "observation obs-c-k-2025-09: effective='2025-09-01T08:00:00+00:00' status=final value=4.2 mmol/L",
+        "observation obs-c-k-2026-03: effective='2026-03-01T08:00:00+00:00' status=final value=4.4 mmol/L",
         "observation obs-c-k1: effective='2026-08-17T08:00:00+00:00' status=final value=6.1 mEq",
-        "medication med-c-1: authored_on='2026-02-01T00:00:00+00:00' status=active"
+        "observation obs-c-na-2024-03: effective='2024-03-01T08:00:00+00:00' status=final value=141 mmol/L",
+        "observation obs-c-na-2025-03: effective='2025-03-01T08:00:00+00:00' status=final value=140 mmol/L",
+        "observation obs-c-na-2026-03: effective='2026-03-01T08:00:00+00:00' status=final value=140 mmol/L",
+        "medication med-c-1: authored_on='2026-02-01T00:00:00+00:00' status=active",
+        "medication med-c-2: authored_on='2023-01-20T00:00:00+00:00' status=active"
       ]
     },
     {
@@ -87,7 +145,24 @@
       "stage": "persisted",
       "status": "completed",
       "timeline": [
-        "medication med-d-1: authored_on='2026-08-10T00:00:00+00:00' status=active"
+        "observation obs-d-creat-2023-01: effective='2023-01-10T08:00:00+00:00' status=final value=0.9 mg/dL",
+        "observation obs-d-creat-2024-07: effective='2024-07-10T08:00:00+00:00' status=final value=1.0 mg/dL",
+        "observation obs-d-creat-2025-07: effective='2025-07-10T08:00:00+00:00' status=final value=0.9 mg/dL",
+        "observation obs-d-creat-2026-08: effective='2026-08-05T08:00:00+00:00' status=final value=1.0 mg/dL",
+        "observation obs-d-k-2023-01: effective='2023-01-10T08:00:00+00:00' status=final value=4.0 mmol/L",
+        "observation obs-d-k-2023-07: effective='2023-07-10T08:00:00+00:00' status=final value=4.1 mmol/L",
+        "observation obs-d-k-2024-01: effective='2024-01-10T08:00:00+00:00' status=final value=4.0 mmol/L",
+        "observation obs-d-k-2024-07: effective='2024-07-10T08:00:00+00:00' status=final value=4.2 mmol/L",
+        "observation obs-d-k-2025-01: effective='2025-01-10T08:00:00+00:00' status=final value=4.1 mmol/L",
+        "observation obs-d-k-2025-07: effective='2025-07-10T08:00:00+00:00' status=final value=4.0 mmol/L",
+        "observation obs-d-k-2026-01: effective='2026-01-10T08:00:00+00:00' status=final value=4.1 mmol/L",
+        "observation obs-d-k-2026-08: effective='2026-08-05T08:00:00+00:00' status=final value=4.2 mmol/L",
+        "observation obs-d-na-2024-01: effective='2024-01-10T08:00:00+00:00' status=final value=141 mmol/L",
+        "observation obs-d-na-2025-07: effective='2025-07-10T08:00:00+00:00' status=final value=141 mmol/L",
+        "observation obs-d-na-2026-08: effective='2026-08-05T08:00:00+00:00' status=final value=140 mmol/L",
+        "medication med-d-1: authored_on='2026-08-10T00:00:00+00:00' status=active",
+        "medication med-d-2: authored_on='2024-06-10T00:00:00+00:00' status=completed",
+        "medication med-d-3: authored_on='2025-03-22T00:00:00+00:00' status=completed"
       ]
     },
     {
@@ -108,10 +183,32 @@
       "stage": "persisted",
       "status": "completed",
       "timeline": [
+        "observation obs-e-creat-2023-06: effective='2023-06-01T08:00:00+00:00' status=final value=1.0 mg/dL",
+        "observation obs-e-creat-2024-06: effective='2024-06-01T08:00:00+00:00' status=final value=1.3 mg/dL",
+        "observation obs-e-creat-2024-12: effective='2024-12-01T08:00:00+00:00' status=final value=1.4 mg/dL",
+        "observation obs-e-creat-2025-06: effective='2025-06-01T08:00:00+00:00' status=final value=1.5 mg/dL",
+        "observation obs-e-creat-2025-12: effective='2025-12-01T08:00:00+00:00' status=final value=1.5 mg/dL",
+        "observation obs-e-creat-2026-02: effective='2026-02-01T08:00:00+00:00' status=final value=1.6 mg/dL",
+        "observation obs-e-creat-2026-06: effective='2026-06-15T08:00:00+00:00' status=final value=1.6 mg/dL",
+        "observation obs-e-creat-2026-08: effective='2026-08-16T08:00:00+00:00' status=final value=1.6 mg/dL",
+        "observation obs-e-k-2023-06: effective='2023-06-01T08:00:00+00:00' status=final value=4.3 mmol/L",
+        "observation obs-e-k-2023-12: effective='2023-12-01T08:00:00+00:00' status=final value=4.4 mmol/L",
+        "observation obs-e-k-2024-06: effective='2024-06-01T08:00:00+00:00' status=final value=4.6 mmol/L",
+        "observation obs-e-k-2024-12: effective='2024-12-01T08:00:00+00:00' status=final value=4.8 mmol/L",
+        "observation obs-e-k-2025-06: effective='2025-06-01T08:00:00+00:00' status=final value=5.0 mmol/L",
+        "observation obs-e-k-2025-12: effective='2025-12-01T08:00:00+00:00' status=final value=5.1 mmol/L",
+        "observation obs-e-k-2026-02: effective='2026-02-01T08:00:00+00:00' status=final value=5.3 mmol/L",
+        "observation obs-e-k-2026-04: effective='2026-04-15T08:00:00+00:00' status=final value=5.5 mmol/L",
+        "observation obs-e-k-2026-06: effective='2026-06-15T08:00:00+00:00' status=final value=5.6 mmol/L",
         "observation obs-e-k1: effective='2026-08-16T08:00:00+00:00' status=final value=5.7 mmol/L",
+        "observation obs-e-na-2023-06: effective='2023-06-01T08:00:00+00:00' status=final value=140 mmol/L",
+        "observation obs-e-na-2024-12: effective='2024-12-01T08:00:00+00:00' status=final value=139 mmol/L",
+        "observation obs-e-na-2025-12: effective='2025-12-01T08:00:00+00:00' status=final value=138 mmol/L",
+        "observation obs-e-na-2026-08: effective='2026-08-16T08:00:00+00:00' status=final value=137 mmol/L",
         "medication med-e-1: authored_on='2025-12-01T00:00:00+00:00' status=active",
         "medication med-e-2: authored_on='2025-12-01T00:00:00+00:00' status=active",
-        "medication med-e-3: authored_on='2026-06-15T00:00:00+00:00' status=active"
+        "medication med-e-3: authored_on='2026-06-15T00:00:00+00:00' status=active",
+        "medication med-e-4: authored_on='2023-10-10T00:00:00+00:00' status=active"
       ]
     }
   ],

@@ -30,6 +30,7 @@ __all__ = [
     "patient_summary_path",
     "claims_collection_path",
     "evidence_collection_path",
+    "presentations_collection_path",
     "PatientSummary",
 ]
 
@@ -64,6 +65,14 @@ def claims_collection_path(run_id: str, patient_id: str) -> str:
 def evidence_collection_path(run_id: str, patient_id: str) -> str:
     """Subcollection path for one patient's evidence documents (spec §44)."""
     return f"runs/{run_id}/patients/{patient_id}/evidence"
+
+
+def presentations_collection_path(run_id: str) -> str:
+    """Collection path for one run's UI-shaped presentation payloads
+    (TD-011) -- a SIBLING of `runs/{run_id}/patients/...`, not nested under
+    it, since a presentation is a public read-model derived from (not part
+    of) the private per-patient claims/evidence artifacts."""
+    return f"runs/{run_id}/presentations"
 
 
 class PatientSummary(BaseModel):

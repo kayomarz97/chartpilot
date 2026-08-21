@@ -31,6 +31,7 @@ class InMemoryRunRepository:
     def __init__(self, *, fail_after_writes: int | None = None) -> None:
         self._summaries: dict[tuple[str, str], PatientSummary] = {}
         self._collections: dict[str, dict[str, dict[str, Any]]] = {}
+        self._presentations: dict[str, dict[str, dict[str, Any]]] = {}
         self._fail_after_writes = fail_after_writes
         self._writes_so_far = 0
 
@@ -62,3 +63,9 @@ class InMemoryRunRepository:
     def read_documents(self, collection_path: str) -> list[tuple[str, dict[str, Any]]]:
         collection = self._collections.get(collection_path, {})
         return list(collection.items())
+
+    def upsert_presentation(self, run_id: str, patient_id: str, payload: dict[str, Any]) -> None:
+        self._presentations.setdefault(run_id, {})[patient_id] = payload
+
+    def list_presentations(self, run_id: str) -> list[dict[str, Any]]:
+        return list(self._presentations.get(run_id, {}).values())

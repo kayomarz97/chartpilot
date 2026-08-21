@@ -1,5 +1,16 @@
 .page {
   padding: 2rem 0 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .title {
@@ -9,7 +20,6 @@
 
 .subtitle {
   color: var(--on-surface-muted);
-  margin-bottom: 1.75rem;
 }
 
 .grid {
@@ -19,4 +29,25 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.safetyDemo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.5rem;
+  background: var(--surface-2);
+  border: 1.5px dashed var(--review-border);
+  border-radius: var(--radius-lg);
+}
+
+.safetyDemoHeading {
+  font-size: 1.05rem;
+  color: var(--review-fg);
+}
+
+.safetyDemoBody {
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+  max-width: 72ch;
 }
