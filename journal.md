@@ -24,9 +24,18 @@ TWO REAL BUGS found+fixed by the LIVE smoke (this is why smoke matters — both 
 DISPATCH NOTE (honest, not a bug): the 5 per-run tasks process ~1-2 at a time (serial-ish), not 5 concurrent —
   Cloud Run cold-start + Cloud Tasks retry backoff. Fine for a nightly demo batch; if throughput matters, set
   Cloud Run --min-instances=1 and/or tune queue maxConcurrentDispatches. Not corrected (optimization, not a bug).
-STILL PENDING (user-facing): (a) FRONTEND "live website" not deployed — Next.js currently MOCK-data; judged demo
-  path = precomputed run; deploying the UI is the next task. (b) Devpost submission content. (c) ROTATE the
-  Gemini key (was pasted in chat). (d) demo video. (e) Phase 20 self-audit (§80/§81, no video).
+FRONTEND LIVE (public, 2026-08-21): https://chartpilot-frontend-zkhsg5lcca-el.a.run.app (Cloud Run service
+  chartpilot-frontend, --allow-unauthenticated; renders from baked-in synthetic mockData.ts, no backend/secrets).
+  Verified: / → 200 <title>ChartPilot</title>, /patients/MRN-48213 → 200. Sonnet containerized (next.config
+  output:standalone + frontend/Dockerfile node:22-slim pinned, non-root node user, $PORT); Opus deployed via
+  new infra/70_deploy_frontend.sh. pnpm build exit 0. TWO live Cloud Run services now: chartpilot-api (private
+  backend) + chartpilot-frontend (public UI).
+SUBMISSION.md written: copy-paste Devpost content (all fields + REQUIRED Iatronix disclosure + honest scope) +
+  final checklist. Frontend URL filled in.
+STILL PENDING (user-facing, in SUBMISSION.md checklist): (a) make GitHub repo PUBLIC/shared with judges
+  (currently private). (b) record ~3-4min demo video. (c) ROTATE the Gemini key (pasted in chat). (d) submit on
+  Devpost by 2026-08-31 5pm PDT. (e) OPTIONAL: Phase 20 self-audit (§80/§81, no video); wire live frontend→backend
+  read API (currently UI is mock-data, backend results live in Firestore separately).
 --- Phase 19 (hermetic build) detail (superseded header) ---
 Phase: 19 COMPLETE (live composition root — deployed worker actually processes patients). Committed + tag phase-19.
 PHASE 19 (Sonnet built, Opus independently verified): the deployed Cloud Run worker now REALLY runs the pipeline.

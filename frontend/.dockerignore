@@ -1,0 +1,44 @@
+# Build context is `frontend/` (see Dockerfile header). Patterns below are
+# matched relative to `frontend/`.
+
+# Version control
+.git
+.gitignore
+
+# Secrets -- never baked into the image (this app has none, but never
+# take the chance).
+.env
+.env.*
+!.env.example
+
+# Node / package manager caches
+node_modules
+.pnpm-store
+
+# Next.js build output -- rebuilt inside the image, not copied in.
+.next
+out
+
+# Tests / fixtures -- not needed at runtime
+tests/
+**/*.test.ts
+**/*.test.tsx
+vitest.config.ts
+vitest.setup.ts
+.vitest
+coverage
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+.idea
+.vscode
+
+# Not part of the runtime artifact
+Dockerfile
+.dockerignore
