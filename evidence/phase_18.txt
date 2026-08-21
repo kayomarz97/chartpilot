@@ -1,0 +1,85 @@
+18
+39f2153cdeff4f8434e9ff1f7cfd7577e16a092c
+Fri Aug 21 12:48:23 PM UTC 2026
+----- ruff format --check -----
+145 files already formatted
+[PASS] ruff format --check
+----- ruff check -----
+All checks passed!
+[PASS] ruff check
+----- mypy -----
+Success: no issues found in 86 source files
+[PASS] mypy
+----- pytest -----
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /root/projects/doctor_helper/backend
+configfile: pyproject.toml
+plugins: socket-0.8.1, anyio-4.14.2
+collected 307 items / 1 deselected / 306 selected
+
+tests/adversarial/test_fabrication_rejected.py .....                     [  1%]
+tests/adversarial/test_high_priority_coverage.py ............            [  5%]
+tests/adversarial/test_prompt_injection_invariant.py ...                 [  6%]
+tests/adversarial/test_source_conflict.py ...                            [  7%]
+tests/unit/test_abnormality.py ....                                      [  8%]
+tests/unit/test_adr.py .........                                         [ 11%]
+tests/unit/test_agent_claims.py .......                                  [ 14%]
+tests/unit/test_agent_model_pin.py .....                                 [ 15%]
+tests/unit/test_agent_toolcall.py ......                                 [ 17%]
+tests/unit/test_api_endpoints.py ..........                              [ 20%]
+tests/unit/test_appointments.py .....                                    [ 22%]
+tests/unit/test_chunking.py ......                                       [ 24%]
+tests/unit/test_citation_normalization.py ..........                     [ 27%]
+tests/unit/test_citation_verifier.py ..........                          [ 31%]
+tests/unit/test_claim_gate.py .......                                    [ 33%]
+tests/unit/test_cloud_tasks_queue.py ....                                [ 34%]
+tests/unit/test_config.py ......                                         [ 36%]
+tests/unit/test_corruption_suite.py .......                              [ 38%]
+tests/unit/test_enqueue.py ..                                            [ 39%]
+tests/unit/test_evidence_budget.py .....                                 [ 41%]
+tests/unit/test_evidence_snapshot.py .........                           [ 44%]
+tests/unit/test_evidence_throttle.py .....                               [ 45%]
+tests/unit/test_fhir_pagination.py .......                               [ 48%]
+tests/unit/test_fhir_transport.py ....                                   [ 49%]
+tests/unit/test_guideline_pack.py ......                                 [ 51%]
+tests/unit/test_health.py ...                                            [ 52%]
+tests/unit/test_medication.py .....                                      [ 53%]
+tests/unit/test_no_prose_assertions.py ......                            [ 55%]
+tests/unit/test_no_sampling_params.py .                                  [ 56%]
+tests/unit/test_observation_normalize.py ........                        [ 58%]
+tests/unit/test_openfda.py ......                                        [ 60%]
+tests/unit/test_orchestrator.py ......                                   [ 62%]
+tests/unit/test_patient_state.py ...............                         [ 67%]
+tests/unit/test_pipeline_demo.py ............                            [ 71%]
+tests/unit/test_pipeline_resilience.py ..                                [ 72%]
+tests/unit/test_potassium_rule.py .....                                  [ 73%]
+tests/unit/test_precomputed_run.py ......                                [ 75%]
+tests/unit/test_pubmed.py ........                                       [ 78%]
+tests/unit/test_review_integrity.py .......                              [ 80%]
+tests/unit/test_review_packet.py ...                                     [ 81%]
+tests/unit/test_review_reviewer.py .....                                 [ 83%]
+tests/unit/test_status_supersession.py .......                           [ 85%]
+tests/unit/test_storage_subcollections.py .....                          [ 87%]
+tests/unit/test_task_queue.py ...                                        [ 88%]
+tests/unit/test_temporal.py ............                                 [ 92%]
+tests/unit/test_two_phase.py .....                                       [ 93%]
+tests/unit/test_units.py .........                                       [ 96%]
+tests/unit/test_validity_engine.py ...                                   [ 97%]
+tests/unit/test_validity_metrics.py .......                              [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /root/projects/doctor_helper/backend/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================= 306 passed, 1 deselected, 1 warning in 1.80s =================
+[PASS] pytest
+----- secret_scan -----
+secret_scan: no secrets detected
+[PASS] secret_scan
+----- no_sampling_params -----
+check_no_sampling_params: no sampling-parameter usage found
+[PASS] no_sampling_params
+----- ALL CHECKS PASSED -----

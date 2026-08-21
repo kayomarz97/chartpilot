@@ -1,0 +1,150 @@
+"""HTTP endpoints for Cloud Scheduler / Cloud Tasks callers (spec §76A.1).
+
+- `POST /enqueue-run` -- Cloud Scheduler's nightly target: runs the existing
+  `enqueue_run` fan-out (spec §48) and returns its `EnqueueResult`.
+- `POST /tasks/process-patient` -- Cloud Tasks' worker target: parses a
+  `RunTask` body and runs it through the durable per-patient processor
+  (spec §45/§46/§47). Idempotency and dead-lettering are already handled
+  inside `process_patient` itself (a terminal checkpoint short-circuits);
+  this endpoint only needs to not crash on a redelivered task, which it
+  doesn't -- a redelivery just re-invokes the handler, which returns the
+  same terminal checkpoint. A `RetryableStageError` propagating out of the
+  handler is deliberately left uncaught: FastAPI turns it into a 500, which
+  is exactly the signal Cloud Tasks needs to redeliver with `attempt + 1`.
+
+Both endpoints are protected by `require_oidc` (spec §76A.1) and get their
+collaborators (`appointment_source`, `queue`, `clock`,
+`process_patient_handler`) through FastAPI dependencies so tests can swap in
+hermetic fakes via `app.dependency_overrides`. The real (production) default
+providers are thin `# VERIFY-LIVE`/`NotImplementedError` wirings -- Part A's
+job is a correct, hermetically-tested HTTP surface, not a fully live
+composition root (that needs additional settings/infra wiring, Phase 19).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, ConfigDict
+
+from app.api.auth import require_oidc
+from app.tasks.appointments import AppointmentSource
+from app.tasks.enqueue import EnqueueResult, enqueue_run
+from app.tasks.models import Checkpoint, RunTask
+from app.tasks.queue import TaskQueue
+
+__all__ = ["router"]
+
+router = APIRouter()
+
+
+class EnqueueRunRequest(BaseModel):
+    """Body of `POST /enqueue-run`. `run_id` is required and caller-supplied
+    (Cloud Scheduler's job config), keeping the endpoint simple and
+    deterministic rather than minting randomness server-side."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str
+
+
+def get_appointment_source() -> AppointmentSource:
+    """Real (production) `AppointmentSource` provider.
+
+    No real scheduling-system adapter exists yet -- only the `Protocol` and
+    the hermetic `InMemoryAppointmentSource` (see `app.tasks.appointments`).
+    Building one (e.g. reading FHIR `Appointment` resources) is Phase 19
+    scope. Tests MUST override this via
+    `app.dependency_overrides[get_appointment_source]`.
+    """
+    raise NotImplementedError(
+        "no real AppointmentSource adapter wired yet -- Phase 19 scope; "
+        "override get_appointment_source in tests/real deployment wiring"
+    )
+
+
+def get_queue() -> TaskQueue:
+    """Real (production) `TaskQueue` provider.
+
+    `app.tasks.cloud_tasks.CloudTasksQueue` exists and structurally
+    satisfies `TaskQueue`, but constructing it for real needs the target
+    queue name, worker URL, and invoker service account -- none of which are
+    yet plumbed through `app.config.Settings` (that plumbing is Phase 19/
+    Part B `infra/` scope, spec §76). Tests MUST override this via
+    `app.dependency_overrides[get_queue]`.
+    """
+    raise NotImplementedError(
+        "real CloudTasksQueue wiring needs queue/worker-url/service-account "
+        "settings not yet in app.config.Settings -- Phase 19 scope; "
+        "override get_queue in tests/real deployment wiring"
+    )
+
+
+def _utc_now() -> datetime:
+    """The real wall clock -- pure stdlib, no network, safe to wire for real."""
+    return datetime.now(UTC)
+
+
+def get_clock() -> Callable[[], datetime]:
+    """Real (production) clock provider: the actual UTC wall clock."""
+    return _utc_now
+
+
+def _live_process_patient_handler(task: RunTask) -> Checkpoint:
+    """Real (production) `process_patient` wiring.
+
+    `app.tasks.orchestrator.process_patient` itself is fully implemented,
+    but calling it for real needs live stage runners (FHIR/Gemini/PubMed/
+    openFDA) and a real Firestore-backed `CheckpointStore` -- constructing
+    those per-request without a proper composition root is out of scope for
+    Part A. Tests MUST override this via
+    `app.dependency_overrides[get_process_patient_handler]`.
+    """
+    raise NotImplementedError(
+        "live process_patient wiring is Phase 19 scope -- Part A only wires "
+        "the HTTP surface + auth + dedup hermetically"
+    )
+
+
+def get_process_patient_handler() -> Callable[[RunTask], Checkpoint]:
+    """Real (production) `process_patient_handler` provider."""
+    return _live_process_patient_handler
+
+
+_OidcClaims = Annotated[Mapping[str, Any], Depends(require_oidc)]
+
+
+@router.post("/enqueue-run", response_model=EnqueueResult)
+def enqueue_run_endpoint(
+    body: EnqueueRunRequest,
+    _claims: _OidcClaims,
+    appointment_source: Annotated[AppointmentSource, Depends(get_appointment_source)],
+    queue: Annotated[TaskQueue, Depends(get_queue)],
+    clock: Annotated[Callable[[], datetime], Depends(get_clock)],
+) -> EnqueueResult:
+    """Cloud Scheduler's nightly fan-out target (spec §48)."""
+    return enqueue_run(
+        run_id=body.run_id,
+        appointment_source=appointment_source,
+        queue=queue,
+        clock=clock,
+    )
+
+
+@router.post("/tasks/process-patient", response_model=Checkpoint)
+def process_patient_endpoint(
+    task: RunTask,
+    _claims: _OidcClaims,
+    handler: Annotated[Callable[[RunTask], Checkpoint], Depends(get_process_patient_handler)],
+) -> Checkpoint:
+    """Cloud Tasks' per-patient worker target (spec §45/§46/§47).
+
+    Idempotent by construction: `process_patient` (or any injected handler
+    wrapping it) short-circuits on a terminal checkpoint, so a redelivered
+    task safely returns 200 with the same checkpoint rather than
+    reprocessing.
+    """
+    return handler(task)

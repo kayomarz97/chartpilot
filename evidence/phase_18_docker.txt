@@ -1,0 +1,31 @@
+===== Phase 18 Docker verification (§76A.2) =====
+SHA: 39f2153cdeff4f8434e9ff1f7cfd7577e16a092c
+UTC: Fri Aug 21 12:48:45 PM UTC 2026
+
+----- 1. docker build (clean context) -----
+#14 exporting manifest list sha256:4382a531303102b3df679b6e73c22924b9725339e068dfb9bfdda66da685ef32 done
+#14 naming to docker.io/library/chartpilot-verify:p18 done
+#14 unpacking to docker.io/library/chartpilot-verify:p18
+#14 unpacking to docker.io/library/chartpilot-verify:p18 1.2s done
+#14 DONE 1.2s
+
+ [33m1 warning found (use docker --debug to expand):
+[0m - JSONArgsRecommended: JSON arguments recommended for CMD to prevent unintended behavior related to OS signals (line 79)
+build exit: 0
+
+----- 2. container starts + /health 200 WITH required env -----
+health (with env): HTTP 200
+runtime user: uid=1000(chartpilot) gid=1000(chartpilot) groups=1000(chartpilot)
+
+----- 3. /health 503 (fail loud) WITHOUT required env -----
+health (no env): HTTP 503
+body: {"status":"error","detail":"missing or invalid required configuration","missing_fields":["gcp_project_id","gcp_region","gemini_api_key","model_a_id","model_b_id"]}
+
+----- 4. no secret / .env baked into image -----
+. .. .venv app 
+grep image layers for key patterns (AQ./ya29./AIza):
+0
+0 (none found)
+
+----- 5. cleanup -----
+test image removed

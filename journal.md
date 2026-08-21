@@ -1,7 +1,41 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
-Phase: 17 COMPLETE (latency + evaluation + resilience fix + README). Proceeding to Phase 18.
+Phase: 18 PART A COMPLETE (deployment layer — hermetic + locally Docker-verified). Committed + tag phase-18.
+PHASE 18 SPLIT: Part A = machine-checkable container + endpoints + auth + real CloudTasksQueue + tests (DONE,
+  this session). Part B = actual gcloud deploy to isolated chartpilot-agentic — scripts written under infra/,
+  NOT run (they touch the user's cloud + cost money; user runs them, TD-002). Phase 19 smoke = infra/60_smoke.sh.
+PART A DELIVERED (Sonnet built, Opus independently verified):
+  - backend/Dockerfile (multi-stage; base pinned to python:3.11-slim@sha256:9c900dea9e8fb7e...; non-root uid1000;
+    $PORT via shell-exec CMD; uv --frozen --no-dev) + backend/.dockerignore.
+  - app/api/auth.py: require_oidc dependency — FAIL-CLOSED if oidc_audience unset; injectable verifier;
+    google.oauth2.id_token.verify_oauth2_token (# VERIFY-LIVE).
+  - app/api/routes.py: POST /enqueue-run (Scheduler → enqueue_run), POST /tasks/process-patient (Tasks →
+    process_patient handler). Both OIDC-protected. Providers injectable; real defaults = loud NotImplementedError
+    (Phase 19 live wiring), NOT fake stubs. RetryableStageError → 500 → Cloud Tasks redelivery.
+  - app/tasks/cloud_tasks.py: CloudTasksQueue (TaskQueue Protocol) — lazy gRPC client (offline-safe construct),
+    OIDC token, name-based dedup via AlreadyExists→False. Mirrors firestore_repo # VERIFY-LIVE pattern.
+  - config.py: +optional oidc_audience. main.py: mounted api_router. Tests: test_api_endpoints.py,
+    test_cloud_tasks_queue.py (auth reject/accept, idempotency, EnqueueResult, Protocol structural).
+  - deps google-cloud-tasks + google-auth (were pre-added by dead Phase-18 subagent; kept, uv.lock frozen-clean).
+VERIFY (Opus, independent — 2026-08-21): make check PHASE=18 exit 0, 306 passed. Docker §76A.2: build exit 0;
+  /health 200 with env; /health 503 fail-loud without env (names missing fields); non-root uid1000; NO .env in
+  image; 0 secret patterns in image layers. evidence/phase_18.txt + evidence/phase_18_docker.txt.
+TWO HONEST DEFERRALS TO PHASE 19 (flagged, not hidden):
+  1. config/models.yaml lives OUTSIDE backend/ build context → NOT in the image. Safe now (nothing wired calls
+     load_model_pin; handler is a NotImplementedError stub). Dockerfile documents 2 fixes for Phase 19.
+  2. /health checks Settings only, NOT live pinned-model resolution (§8/§76A.1 "incl. pinned-model resolution").
+     Full §76A.1 health needs the models.yaml gap fixed + a live model-pin check — Phase 19 when the real
+     handler is wired.
+INFRA (Part B, Opus-authored, NOT run): infra/{_config,00_enable_apis,10_service_accounts,20_firestore,
+  25_secret,30_tasks_queue,40_deploy_run,50_scheduler,60_smoke}.sh + README.md. Idempotent, set -euo pipefail,
+  every gcloud pinned --project=chartpilot-agentic + guardrail aborts if project not visible. Key via Secret
+  Manager (never baked). Two SAs: runtime (datastore.user) vs invoker (run.invoker on service). All bash -n clean.
+Next action: USER runs infra/ steps 00→60 (exact instructions given in chat) to do the actual deploy (Phase 18
+  Part B) + Phase 19 smoke. Then Phase 20 self-audit (§80/§81; NO video per user). If user wants, wire the real
+  Phase 19 handler (live FHIR/Gemini/Firestore composition root) + fix the 2 deferrals above before deploy.
+--- prior Phase 17 detail below (superseded header) ---
+Phase: 17 COMPLETE (latency + evaluation + resilience fix + README).
 LATENCY FINAL (honest, both sessions recorded): Session A 44/58s (≤90s MET); Session B 125/189/193s (NOT MET).
   ≤90s ACHIEVABLE but NOT reliably met — dominated by Model A (gemini-3.7-flash) call latency (~150s under
   load, ~seconds when light). Levers: thinking_level=low, faster Model A, trim input. Demo uses precomputed

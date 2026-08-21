@@ -1,0 +1,39 @@
+# Build context is `backend/` (see Dockerfile header). Patterns below are
+# matched relative to `backend/`.
+
+# Version control
+.git
+.gitignore
+
+# Secrets -- never baked into the image (spec: no hard-coded secrets).
+.env
+.env.*
+!.env.example
+
+# Python caches / bytecode
+**/__pycache__
+**/*.pyc
+**/*.pyo
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# Tests / fixtures -- not needed at runtime
+tests/
+
+# Local snapshot / evidence caches -- not needed at runtime
+evidence/
+**/*.snapshot.json
+**/.snapshot_cache
+**/snapshot_cache
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+.idea
+.vscode
+
+# Not part of the runtime artifact
+Dockerfile
+.dockerignore

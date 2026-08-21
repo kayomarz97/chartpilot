@@ -1,7 +1,8 @@
 """FastAPI application entrypoint.
 
-Phase 2 scope: app skeleton + a real `/health` check only. No business
-logic, no FHIR, no rules, no Gemini calls live here yet.
+Phase 2 scope: app skeleton + a real `/health` check. Phase 18 (spec §76A.1)
+adds `app.api.routes` -- the two OIDC-protected endpoints Cloud Scheduler
+and Cloud Tasks call (`/enqueue-run`, `/tasks/process-patient`).
 """
 
 from __future__ import annotations
@@ -13,11 +14,13 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+from app.api.routes import router as api_router
 from app.config import get_settings
 
 DEFAULT_PORT = 8000
 
 app = FastAPI(title="ChartPilot Backend")
+app.include_router(api_router)
 
 
 @app.get("/health")

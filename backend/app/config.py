@@ -35,6 +35,13 @@ class Settings(BaseSettings):
       - display_timezone: IANA name used to render coarse-precision
         clinical timestamps for humans; defaults to "Asia/Kolkata". This is
         a display convention, not a secret/environment-specific value.
+      - oidc_audience: the audience Cloud Tasks/Scheduler OIDC ID tokens
+        must carry for `app.api.auth.require_oidc` to accept them --
+        normally this service's own `run.app` URL. Optional so existing
+        hermetic `/health` tests (which don't set it) keep passing at
+        import/startup time; `require_oidc` itself fails CLOSED (rejects
+        every request) when it is unset, rather than silently allowing
+        unauthenticated access (spec §76A.1).
     """
 
     model_config = SettingsConfigDict(
@@ -52,6 +59,7 @@ class Settings(BaseSettings):
 
     allow_synthetic_debug_logs: bool = False
     display_timezone: str = "Asia/Kolkata"
+    oidc_audience: str | None = None
 
 
 @lru_cache(maxsize=1)
