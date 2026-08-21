@@ -1,6 +1,33 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+Phase: 18B + 19 DEPLOYED LIVE TO chartpilot-agentic (2026-08-21) — full chain PROVEN on real infra.
+LIVE DEPLOY (Opus ran infra/ 00→50 as kayomarz97@gmail.com; guardrail confirmed active gcloud project was
+  iatronix-med-search-v1 but every cmd pinned --project=chartpilot-agentic → Iatronix untouched, TD-002 held):
+  - Service LIVE + PRIVATE: https://chartpilot-api-zkhsg5lcca-el.a.run.app  (region asia-south1, --no-allow-unauth).
+    /health → 200. Runtime SA chartpilot-run-sa (datastore.user + secretAccessor); invoker SA
+    chartpilot-invoker-sa (run.invoker on service). Gemini key in Secret Manager (gemini-api-key:1), mounted.
+  - Firestore Native (default) DB in asia-south1. Cloud Tasks queue chartpilot-queue. Scheduler chartpilot-nightly
+    (02:00 Asia/Kolkata, body {"run_id":"nightly"}). Firestore rules NOT applied (no firebase CLI; safe).
+  - PROVEN END-TO-END: Scheduler→/enqueue-run→Cloud Tasks→/tasks/process-patient→REAL Gemini→Firestore. Real
+    docs at runs/{run_id}/patients/{fhir-id}: e.g. smoke-v2/patient-a=partial, patient-d=flagged_for_review;
+    smoke-v3/patient-a=partial, patient-c=flagged_for_review (all stage=persisted). Worker latencies 54s/123s
+    (real Gemini). 0 errors once fixed.
+TWO REAL BUGS found+fixed by the LIVE smoke (this is why smoke matters — both were invisible to hermetic tests):
+  1. IAM (infra): /enqueue-run 500 "lacks cloudtasks.tasks.create". Cloud Tasks OIDC enqueue needs 3 grants my
+     scripts missed → added live + folded into infra/10_service_accounts.sh: runtime SA cloudtasks.enqueuer;
+     runtime SA serviceAccountUser on invoker; Cloud Tasks service agent tokenCreator on invoker. (IAM takes
+     minutes to propagate — first trigger 500'd, retrigger after 120s worked.)
+  2. CODE: /tasks/process-patient 422. CloudTasksQueue sent JSON body with NO Content-Type header → FastAPI
+     wouldn't parse RunTask. Fixed cloud_tasks.py (headers={"Content-Type":"application/json"}) + extracted pure
+     _build_task + hermetic test asserting the header. make check exit 0 (318 tests). Rebuilt+redeployed (rev 4).
+DISPATCH NOTE (honest, not a bug): the 5 per-run tasks process ~1-2 at a time (serial-ish), not 5 concurrent —
+  Cloud Run cold-start + Cloud Tasks retry backoff. Fine for a nightly demo batch; if throughput matters, set
+  Cloud Run --min-instances=1 and/or tune queue maxConcurrentDispatches. Not corrected (optimization, not a bug).
+STILL PENDING (user-facing): (a) FRONTEND "live website" not deployed — Next.js currently MOCK-data; judged demo
+  path = precomputed run; deploying the UI is the next task. (b) Devpost submission content. (c) ROTATE the
+  Gemini key (was pasted in chat). (d) demo video. (e) Phase 20 self-audit (§80/§81, no video).
+--- Phase 19 (hermetic build) detail (superseded header) ---
 Phase: 19 COMPLETE (live composition root — deployed worker actually processes patients). Committed + tag phase-19.
 PHASE 19 (Sonnet built, Opus independently verified): the deployed Cloud Run worker now REALLY runs the pipeline.
   - app/demo_data/: packaged 5 patient bundles + evidence_snapshot.json under app/ (ships in image; tests/ is

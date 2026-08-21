@@ -35,5 +35,35 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --condition=None >/dev/null
 echo "    Done."
 
+# --- Cloud Tasks OIDC enqueue chain (verified needed via live deploy 2026-08-21) ---
+# For /enqueue-run (running as the runtime SA) to create tasks that carry an
+# OIDC token identifying the invoker SA, THREE grants are required:
+#   1. runtime SA -> cloudtasks.enqueuer            (create tasks in the queue)
+#   2. runtime SA -> serviceAccountUser on invoker  (attach invoker SA to the token)
+#   3. Cloud Tasks service agent -> tokenCreator on invoker (mint the token at dispatch)
+# Missing any of these makes /enqueue-run return HTTP 500 ("lacks cloudtasks.tasks.create"
+# or actAs denied). NOTE: IAM changes here take a few minutes to propagate before the
+# first successful enqueue.
+PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
+TASKS_AGENT="service-${PROJECT_NUMBER}@gcp-sa-cloudtasks.iam.gserviceaccount.com"
+
+echo "==> 1/3 runtime SA -> roles/cloudtasks.enqueuer..."
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${RUNTIME_SA}" \
+  --role="roles/cloudtasks.enqueuer" --condition=None >/dev/null
+
+echo "==> 2/3 runtime SA -> roles/iam.serviceAccountUser on the invoker SA..."
+gcloud iam service-accounts add-iam-policy-binding "${INVOKER_SA}" \
+  --member="serviceAccount:${RUNTIME_SA}" \
+  --role="roles/iam.serviceAccountUser" ${GCLOUD_PROJECT_FLAG} >/dev/null
+
+echo "==> 3/3 Cloud Tasks service agent -> roles/iam.serviceAccountTokenCreator on the invoker SA..."
+# The Cloud Tasks service agent is created lazily on first API use; enabling the API
+# (step 00) is enough for it to exist by the time this runs.
+gcloud iam service-accounts add-iam-policy-binding "${INVOKER_SA}" \
+  --member="serviceAccount:${TASKS_AGENT}" \
+  --role="roles/iam.serviceAccountTokenCreator" ${GCLOUD_PROJECT_FLAG} >/dev/null
+echo "    Done (allow a few minutes for these to propagate before the first run)."
+
 echo "==> (run.invoker for the invoker SA is bound to the SERVICE in step 40,"
 echo "     as a resource-level binding — not a broad project-level grant.)"

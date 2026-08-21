@@ -82,6 +82,31 @@ class CloudTasksQueue:
             self._client = tasks_v2.CloudTasksClient()
         return self._client
 
+    def _build_task(self, task: RunTask, *, queue_path: str) -> tasks_v2.Task:
+        """Build the Cloud Tasks `Task` for `task` (pure -- no network).
+
+        The `Content-Type: application/json` header is REQUIRED: the worker
+        endpoint (`POST /tasks/process-patient`) binds a Pydantic `RunTask`
+        body, and FastAPI only parses the request body as JSON when the
+        content type says so. Without this header Cloud Tasks delivers the
+        bytes as `application/octet-stream` and FastAPI rejects the request
+        with 422 before the handler ever runs.
+        """
+        task_name = f"{queue_path}/tasks/{_sanitize_task_name(task.task_name)}"
+        return tasks_v2.Task(
+            name=task_name,
+            http_request=tasks_v2.HttpRequest(
+                http_method=tasks_v2.HttpMethod.POST,
+                url=self._worker_url,
+                headers={"Content-Type": "application/json"},
+                oidc_token=tasks_v2.OidcToken(
+                    service_account_email=self._service_account_email,
+                    audience=self._audience,
+                ),
+                body=task.model_dump_json().encode(),
+            ),
+        )
+
     def enqueue(self, task: RunTask) -> bool:
         """Enqueue `task` as a Cloud Tasks HTTP task with an OIDC token.
 
@@ -91,20 +116,7 @@ class CloudTasksQueue:
         """
         client = self._get_client()
         queue_path = client.queue_path(self._project, self._location, self._queue)
-        task_name = f"{queue_path}/tasks/{_sanitize_task_name(task.task_name)}"
-
-        cloud_task = tasks_v2.Task(
-            name=task_name,
-            http_request=tasks_v2.HttpRequest(
-                http_method=tasks_v2.HttpMethod.POST,
-                url=self._worker_url,
-                oidc_token=tasks_v2.OidcToken(
-                    service_account_email=self._service_account_email,
-                    audience=self._audience,
-                ),
-                body=task.model_dump_json().encode(),
-            ),
-        )
+        cloud_task = self._build_task(task, queue_path=queue_path)
 
         try:
             # VERIFY-LIVE: `CreateTaskRequest(parent=..., task=...)` +
