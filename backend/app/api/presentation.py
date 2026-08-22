@@ -199,6 +199,7 @@ def _build_finding(
         "statement": claim.statement,
         "severity": claim.severity.value.upper() if claim.severity is not None else None,
         "verdict": finding.verdict.value.upper(),
+        "revisionAttempts": finding.revision_attempts,
         "rationale": claim.rationale,
         "recommendedAction": claim.recommended_action or "",
         "patientEvidence": [

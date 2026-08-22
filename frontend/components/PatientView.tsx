@@ -55,7 +55,11 @@ export function PatientView({
             <ul className={styles.findingsList}>
               {findings.map((finding) => (
                 <li key={finding.claimId}>
-                  <FindingCard finding={finding} onViewEvidence={setActiveFinding} />
+                  <FindingCard
+                    finding={finding}
+                    patientId={patient.patientId}
+                    onViewEvidence={setActiveFinding}
+                  />
                 </li>
               ))}
             </ul>

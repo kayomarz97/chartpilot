@@ -31,6 +31,7 @@ __all__ = [
     "claims_collection_path",
     "evidence_collection_path",
     "presentations_collection_path",
+    "clinician_actions_collection_path",
     "PatientSummary",
 ]
 
@@ -73,6 +74,14 @@ def presentations_collection_path(run_id: str) -> str:
     it, since a presentation is a public read-model derived from (not part
     of) the private per-patient claims/evidence artifacts."""
     return f"runs/{run_id}/presentations"
+
+
+def clinician_actions_collection_path(run_id: str, patient_id: str) -> str:
+    """Subcollection path for one patient's clinician-label documents
+    (Phase B, spec §53) -- a sibling of `claims_collection_path`/
+    `evidence_collection_path` under the same private per-patient tree, one
+    doc per `ClinicianAction.action_id` (idempotent overwrite on retry)."""
+    return f"runs/{run_id}/patients/{patient_id}/clinician_actions"
 
 
 class PatientSummary(BaseModel):

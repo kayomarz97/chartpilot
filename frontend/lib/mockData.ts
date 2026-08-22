@@ -18,6 +18,7 @@ const aaravSharma: PatientRun = {
   findings: [
     {
       claimId: "claim-aarav-hyperkalemia",
+      revisionAttempts: 0,
       claimType: "POSSIBLE_CONCERN",
       statement:
         "Recent potassium of 6.2 mmol/L identified in a patient on lisinopril 20 mg daily suggests possible ACE-inhibitor-associated hyperkalemia and may warrant review before this visit.",
@@ -357,6 +358,7 @@ const rahulVerma: PatientRun = {
   findings: [
     {
       claimId: "claim-rahul-statin-myalgia",
+      revisionAttempts: 0,
       claimType: "PATIENT_SPECIFIC_INFERENCE",
       statement:
         "Reported new muscle aches since starting atorvastatin 40 mg may be statin-associated and could warrant review of the current dose.",
@@ -613,6 +615,7 @@ const sanjayRao: PatientRun = {
   findings: [
     {
       claimId: "claim-sanjay-metformin-renal",
+      revisionAttempts: 0,
       claimType: "POSSIBLE_CONCERN",
       statement:
         "Declining renal function (eGFR 42 mL/min/1.73m²) in a patient continuing metformin 1000 mg twice daily approaches the threshold where FDA labeling recommends dose reduction and increased monitoring for lactic acidosis risk.",
@@ -693,6 +696,7 @@ const sanjayRao: PatientRun = {
     },
     {
       claimId: "claim-sanjay-a1c-suboptimal",
+      revisionAttempts: 0,
       claimType: "CLINICIAN_REVIEW_SUGGESTION",
       statement:
         "Hemoglobin A1c of 8.2% despite over a year on maximal metformin therapy suggests glycemic control is not at goal and may warrant treatment intensification.",

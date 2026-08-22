@@ -71,12 +71,20 @@ export interface PatientEvidenceRef {
   detail: string;
 }
 
+/** A clinician's ground-truth label on one finding (Phase B, spec §53) —
+ * the outer self-improving loop's training signal. */
+export type ClinicianActionKind = "CONFIRM" | "OVERRIDE" | "CORRECT";
+
 export interface Finding {
   claimId: string;
   claimType: ClaimType;
   statement: string;
   severity: Severity;
   verdict: Verdict;
+  /** How many times the Phase A "gate-failure → revise → retry" loop
+   * successfully swapped in a re-quoted claim; 0 if it never entered the
+   * loop. Informational only — never affects `verdict`. */
+  revisionAttempts: number;
   rationale: string;
   recommendedAction: string;
   patientEvidence: PatientEvidenceRef[];

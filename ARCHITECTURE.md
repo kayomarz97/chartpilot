@@ -26,7 +26,10 @@ immutable hashed snapshot) → `AI_REASONING` (**Model A**, `app/agent`, emits `
 spans) → `CITATION_CHECK` (deterministic gates 1–4, `app/citation`) → `INDEPENDENT_REVIEW`
 (**Model B** blinded adversary, `app/review`) → `FINAL_VALIDATION` (`app/gate`, fail-closed verdict) →
 `PERSISTED` (two-phase Firestore commit, `app/storage`). A public read-only `GET /runs/{run_id}`
-serves the persisted **presentation** read-model to the Next.js UI.
+serves the persisted **presentation** read-model to the Next.js UI. In the UI, a clinician may attach
+a **CONFIRM/OVERRIDE/CORRECT label** to any finding (Phase B, `app/feedback`); that label plus the
+automated per-finding signals already on `FindingResult` (citation verdict, Model B verdict, revision
+attempts) are the outer self-improving loop's (planned Phase C) training signal.
 
 **The safety invariant (SPEC §53):** deterministic code owns every fact; free text is `trusted=False`
 and can never mutate a fact/rule/gate; a claim that fails any gate can never be `VERIFIED`; failures
@@ -120,13 +123,18 @@ surface as a status (`FAILED`/`FLAGGED_FOR_REVIEW`), never a silent "no findings
 | `storage/repository.py` | **`RunRepository`** Protocol (`upsert_patient_summary`, `write_documents`, `read_documents`, `upsert_presentation`, `list_presentations`, `get_patient_summary`). |
 | `storage/firestore_repo.py` | **`FirestoreRunRepository(*, project, database)`** — live Admin SDK. Marked `# VERIFY-LIVE`. |
 | `storage/inmemory.py` | **`InMemoryRunRepository(*, fail_after_writes=None)`** — hermetic fake (`FaultInjected`). Use in tests. |
-| `storage/models.py` | **`PatientSummary`**; path helpers `patient_summary_path`, `claims_collection_path`, `evidence_collection_path`, `presentations_collection_path`; `chunk_documents(docs, max_size=400)`, `MAX_WRITES_PER_BATCH=400`. |
+| `storage/models.py` | **`PatientSummary`**; path helpers `patient_summary_path`, `claims_collection_path`, `evidence_collection_path`, `presentations_collection_path`, `clinician_actions_collection_path` (Phase B, `runs/{run_id}/patients/{patient_id}/clinician_actions`); `chunk_documents(docs, max_size=400)`, `MAX_WRITES_PER_BATCH=400`. |
+
+### Clinician feedback — `app/feedback/` (Phase B, spec §53)
+| Path | Key symbols |
+|---|---|
+| `feedback/models.py` | **`ClinicianAction(BaseModel, frozen, extra="forbid")`** — one clinician label on one claim: `action_id` (client-supplied idempotency key = Firestore doc id), `run_id`, `patient_id`, `claim_id`, `action: ClinicianActionKind`, `note: str = ""` (**`trusted: Literal[False] = False`** — a label, never a fact/rule/gate input), `verdict_shown: str \| None`, `recorded_at` (tz-aware; naive rejected). Enum **`ClinicianActionKind`**: `confirm, override, correct`. Persisted via the generic `RunRepository.write_documents` (no new Protocol method), read via `app.api.routes.record_clinician_action`. |
 
 ### API + config — `app/api/`, `app/config.py`, `app/main.py`
 | Path | Key symbols |
 |---|---|
-| `api/routes.py` | **`router`**; `POST /enqueue-run` + `POST /tasks/process-patient` (OIDC via `require_oidc`); **`GET /runs/{run_id}` PUBLIC** (returns `list_presentations`, `[]` not 404 for unknown). DI providers `get_queue`, `get_run_repository`, `get_process_patient_handler`. |
-| `api/presentation.py` | **`build_presentation(result, *, patient_name)->dict`** — camelCase UI payload (`patientId/status/findings/timeline/labs`). Pure. `_LAB_THRESHOLDS` (potassium/sodium/creatinine/egfr, egfr `inverted`). |
+| `api/routes.py` | **`router`**; `POST /enqueue-run` + `POST /tasks/process-patient` (OIDC via `require_oidc`); **`GET /runs/{run_id}` PUBLIC** (returns `list_presentations`, `[]` not 404 for unknown); **`POST /runs/{run_id}/patients/{patient_id}/clinician-action`** (Phase B, OIDC via `require_oidc`) — persists one `ClinicianAction` (body: `claim_id, action, note="", verdict_shown=None, action_id`) via `write_documents(clinician_actions_collection_path(...), ...)`, `action_id` as doc id for idempotent re-submit; reached only via the frontend's authenticated proxy, never a direct browser call. DI providers `get_queue`, `get_run_repository`, `get_process_patient_handler`, `get_clock`. |
+| `api/presentation.py` | **`build_presentation(result, *, patient_name)->dict`** — camelCase UI payload (`patientId/status/findings/timeline/labs`; each finding also carries `revisionAttempts` from `FindingResult.revision_attempts`, Phase B). Pure. `_LAB_THRESHOLDS` (potassium/sodium/creatinine/egfr, egfr `inverted`). |
 | `api/composition.py` | **`live_process_patient_handler(task)`** (prod wiring: real Gemini + Firestore), **`run_demo_patient(...)`** (hermetic), `build_run_repository`, `build_live_queue`, `DEMO_PATIENT_IDS`. |
 | `api/auth.py` | `require_oidc` — fails CLOSED if `oidc_audience` unset. |
 | `config.py` | **`Settings(BaseSettings)`**, **`get_settings()`** (`@lru_cache`; import never raises; tests call `get_settings.cache_clear()`). |
@@ -214,3 +222,12 @@ See `.claude/plans/2026-08-22-self-improving-loop-agent.md`. Tier boundary this 
 - **FROZEN** (loop may draft, never self-apply): `app/rules/`, `app/validation/metrics.py`,
   `gate/claim_gate.py`, `app/normalize/`. The planned `app/improve/proposer.py` must raise if a
   candidate touches these.
+
+**Training signal (Phase B, already collected):** `app/feedback/models.py::ClinicianAction`
+(CONFIRM/OVERRIDE/CORRECT + untrusted note, one per claim, from the UI's per-finding label control
+in `frontend/components/ClinicianActionControl.tsx` via the same-origin OIDC proxy
+`frontend/app/api/clinician-action/route.ts` → `POST /runs/{run_id}/patients/{patient_id}/
+clinician-action`) plus the automated per-finding signals already on `FindingResult`
+(`citationVerdict`, `modelBFinding`/`modelBShouldReject`, `verdict`, `revisionAttempts` — all
+readable from `list_presentations`/`build_presentation`'s output). Phase C reads both to score
+candidate prompt/retrieval changes against real clinician agreement.

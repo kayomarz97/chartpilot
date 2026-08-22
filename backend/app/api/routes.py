@@ -17,8 +17,19 @@
   to expose unauthenticated because the payload is synthetic demo-patient
   output with no secrets, and this route can only READ what
   `run_demo_patient` already wrote -- it has no write path of its own.
+- `POST /runs/{run_id}/patients/{patient_id}/clinician-action` -- OIDC-only
+  (Phase B, spec §53): appends one `app.feedback.models.ClinicianAction`
+  label (CONFIRM/OVERRIDE/CORRECT + an optional untrusted note) for one
+  claim. Reached only via the frontend's authenticated same-origin proxy
+  (`frontend/app/api/clinician-action/route.ts`), never directly from a
+  browser -- the backend Cloud Run service is private OIDC-only except the
+  one public read above. This is the ONLY write path this module exposes
+  besides the Cloud Scheduler/Cloud Tasks endpoints below, and it can only
+  ever append a clinician label to the `clinician_actions` subcollection
+  (`app.storage.models.clinician_actions_collection_path`) -- it never
+  touches a patient's claims, evidence, or gate verdicts.
 
-Both OIDC endpoints are protected by `require_oidc` (spec §76A.1) and get
+All three OIDC endpoints are protected by `require_oidc` (spec §76A.1) and get
 their collaborators (`appointment_source`, `queue`, `clock`,
 `process_patient_handler`) through FastAPI dependencies so tests can swap in
 hermetic fakes via `app.dependency_overrides`. `GET /runs/{run_id}` follows
@@ -33,6 +44,7 @@ network dependency.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from typing import Annotated, Any
@@ -48,6 +60,8 @@ from app.api.composition import (
     live_process_patient_handler,
 )
 from app.config import get_settings
+from app.feedback.models import ClinicianAction, ClinicianActionKind
+from app.storage.models import clinician_actions_collection_path
 from app.storage.repository import RunRepository
 from app.tasks.appointments import AppointmentSource
 from app.tasks.enqueue import EnqueueResult, enqueue_run
@@ -195,3 +209,62 @@ def get_run_presentations(
     return RunPresentationsResponse(
         run_id=run_id, generated_at=None, patients=repo.list_presentations(run_id)
     )
+
+
+# --------------------------------------------------------------------------
+# POST /runs/{run_id}/patients/{patient_id}/clinician-action -- OIDC-only,
+# append a clinician label (Phase B, spec §53)
+# --------------------------------------------------------------------------
+
+
+class ClinicianActionRequest(BaseModel):
+    """Body of `POST /runs/{run_id}/patients/{patient_id}/clinician-action`.
+
+    `run_id`/`patient_id` come from the URL path, not this body -- this
+    model only carries what the clinician actually chose in the UI.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    claim_id: str
+    action: ClinicianActionKind
+    note: str = ""
+    verdict_shown: str | None = None
+    action_id: str
+
+
+@router.post(
+    "/runs/{run_id}/patients/{patient_id}/clinician-action", response_model=ClinicianAction
+)
+def record_clinician_action(
+    run_id: str,
+    patient_id: str,
+    body: ClinicianActionRequest,
+    _claims: _OidcClaims,
+    repo: Annotated[RunRepository, Depends(get_run_repository)],
+    clock: Annotated[Callable[[], datetime], Depends(get_clock)],
+) -> ClinicianAction:
+    """Persist one clinician label for one claim (Phase B, spec §53).
+
+    `body.action_id` is used as the Firestore doc id, so a UI retry after a
+    dropped response overwrites the same doc rather than duplicating it
+    (idempotent by construction, mirroring `RunTask.task_name`'s role
+    elsewhere). This can only ever write to the `clinician_actions`
+    subcollection -- it never touches a patient's claims, evidence, or gate
+    verdicts (see module docstring).
+    """
+    action = ClinicianAction(
+        action_id=body.action_id,
+        run_id=run_id,
+        patient_id=patient_id,
+        claim_id=body.claim_id,
+        action=body.action,
+        note=body.note,
+        verdict_shown=body.verdict_shown,
+        recorded_at=clock(),
+    )
+    repo.write_documents(
+        clinician_actions_collection_path(run_id, patient_id),
+        [(action.action_id, json.loads(action.model_dump_json()))],
+    )
+    return action

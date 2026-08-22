@@ -3,13 +3,18 @@ import { SeverityBadge } from "./SeverityBadge";
 import { VerdictBadge } from "./VerdictBadge";
 import { ClaimTypeBadge } from "./ClaimTypeBadge";
 import { ShapeIcon } from "./icons";
+import { ClinicianActionControl } from "./ClinicianActionControl";
 import styles from "./FindingCard.module.css";
 
 export function FindingCard({
   finding,
+  patientId,
   onViewEvidence,
 }: {
   finding: Finding;
+  /** Threaded down so the clinician-label control can build a stable,
+   * per-patient-per-claim idempotency key (Phase B, spec §53). */
+  patientId: string;
   onViewEvidence: (finding: Finding) => void;
 }) {
   return (
@@ -57,6 +62,12 @@ export function FindingCard({
           </button>
         </div>
       )}
+
+      <ClinicianActionControl
+        patientId={patientId}
+        claimId={finding.claimId}
+        verdictShown={finding.verdict}
+      />
     </article>
   );
 }

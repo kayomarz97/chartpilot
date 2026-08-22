@@ -8,7 +8,11 @@ from __future__ import annotations
 
 from app.gate.models import PatientStage, PatientStatus
 from app.storage.inmemory import InMemoryRunRepository
-from app.storage.models import claims_collection_path, evidence_collection_path
+from app.storage.models import (
+    claims_collection_path,
+    clinician_actions_collection_path,
+    evidence_collection_path,
+)
 from app.storage.two_phase import finalize_patient_result
 
 _RUN_ID = "run-1"
@@ -64,6 +68,19 @@ def test_summary_carries_evidence_snapshot_id() -> None:
     summary = repo.get_patient_summary(_RUN_ID, _PATIENT_ID)
     assert summary is not None
     assert summary.evidence_snapshot_id == "snap-123"
+
+
+def test_clinician_actions_collection_path_is_a_sibling_of_claims_and_evidence() -> None:
+    """(Phase B, spec §53) The clinician-labels subcollection lives under the
+    same private per-patient tree as claims/evidence -- not the public
+    `presentations` collection -- and is bound to `(run_id, patient_id)`
+    exactly like `claims_collection_path`/`evidence_collection_path`."""
+    path = clinician_actions_collection_path(_RUN_ID, _PATIENT_ID)
+    assert path == f"runs/{_RUN_ID}/patients/{_PATIENT_ID}/clinician_actions"
+    assert path != claims_collection_path(_RUN_ID, _PATIENT_ID)
+    assert path != evidence_collection_path(_RUN_ID, _PATIENT_ID)
+    assert clinician_actions_collection_path("run-2", _PATIENT_ID) != path
+    assert clinician_actions_collection_path(_RUN_ID, "patient-2") != path
 
 
 def test_summary_never_inlines_claim_or_evidence_payloads() -> None:

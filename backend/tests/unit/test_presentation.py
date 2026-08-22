@@ -110,7 +110,7 @@ def _claim() -> Claim:
     )
 
 
-def _finding() -> FindingResult:
+def _finding(*, revision_attempts: int = 0) -> FindingResult:
     citation = CitationResult(
         evidence_id="ev-1",
         snapshot_id="snap-1",
@@ -130,6 +130,7 @@ def _finding() -> FindingResult:
         verdict=ClaimVerdict.VERIFIED,
         citation_results=(citation,),
         model_b_verdict=model_b,
+        revision_attempts=revision_attempts,
     )
 
 
@@ -204,6 +205,7 @@ def test_build_presentation_finding_shape_and_enum_uppercasing() -> None:
     assert finding["claimType"] == "POSSIBLE_CONCERN"
     assert finding["severity"] == "HIGH"
     assert finding["verdict"] == "VERIFIED"
+    assert finding["revisionAttempts"] == 0
     assert finding["recommendedAction"] == "Recheck potassium urgently and consider holding ACEi."
 
     patient_evidence = finding["patientEvidence"]
@@ -235,6 +237,17 @@ def test_build_presentation_finding_shape_and_enum_uppercasing() -> None:
     assert "publisher" not in ev
     assert "sourceUrl" not in ev
     assert "reviewedBy" not in ev
+
+
+def test_build_presentation_carries_nonzero_revision_attempts() -> None:
+    """`FindingResult.revision_attempts` (Phase A's gate-failure -> revise ->
+    retry trace field) must survive into the presentation payload so Phase C
+    can read it as one of the automated per-finding signals."""
+    result = _result(findings=(_finding(revision_attempts=2),))
+
+    payload = build_presentation(result, patient_name="Rosa Alvarez")
+
+    assert payload["findings"][0]["revisionAttempts"] == 2
 
 
 def test_build_presentation_no_findings_is_empty_list() -> None:
