@@ -19,6 +19,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from app.agent.prompts import MODEL_A_SYSTEM_INSTRUCTION
+from app.api import composition as api_composition
 from app.api import routes as api_routes
 from app.api.auth import require_oidc
 from app.api.composition import (
@@ -30,6 +32,9 @@ from app.api.composition import (
 )
 from app.config import get_settings
 from app.gate.models import PatientStage, PatientStatus, is_terminal
+from app.improve.models import ImproveTarget
+from app.improve.promote import PromotionLedger
+from app.improve.registry import resolve_artifact
 from app.main import app
 from app.storage.inmemory import InMemoryRunRepository
 from app.tasks.cloud_tasks import CloudTasksQueue
@@ -174,6 +179,158 @@ def test_run_demo_patient_is_idempotent_on_redelivery() -> None:
     assert second.current_stage == first.current_stage
     assert model_a_2.calls == []
     assert model_b_2.calls == []
+
+
+# --------------------------------------------------------------------------
+# model_a_system_instruction pass-through (Phase C step (b))
+# --------------------------------------------------------------------------
+
+
+def test_run_demo_patient_default_uses_pinned_model_a_instruction() -> None:
+    """No `model_a_system_instruction` given -> byte-identical to before
+    this parameter existed: Model A's `.create` call is driven by the
+    pinned `MODEL_A_SYSTEM_INSTRUCTION` constant, unchanged."""
+    cassette = _load_cassette("a")
+    repo = InMemoryRunRepository()
+    task = RunTask(run_id="test-run-default-instruction", patient_id="patient-a")
+    model_a = _model_a_client(cassette, patient_id="patient-a")
+
+    checkpoint = run_demo_patient(
+        task, model_a=model_a, model_b=_model_b_client(cassette), repo=repo, clock=lambda: _NOW
+    )
+
+    assert is_terminal(checkpoint.status)
+    assert len(model_a.calls) == 1
+    assert model_a.calls[0].startswith(MODEL_A_SYSTEM_INSTRUCTION)
+
+
+def test_run_demo_patient_explicit_override_reaches_model_a() -> None:
+    """An explicit `model_a_system_instruction` override reaches Model A's
+    `.create` call INSTEAD of the pinned constant."""
+    cassette = _load_cassette("a")
+    repo = InMemoryRunRepository()
+    task = RunTask(run_id="test-run-override-instruction", patient_id="patient-a")
+    model_a = _model_a_client(cassette, patient_id="patient-a")
+    override = "OVERRIDE SYSTEM INSTRUCTION FOR TESTING -- not the pinned constant."
+
+    checkpoint = run_demo_patient(
+        task,
+        model_a=model_a,
+        model_b=_model_b_client(cassette),
+        repo=repo,
+        clock=lambda: _NOW,
+        model_a_system_instruction=override,
+    )
+
+    assert is_terminal(checkpoint.status)
+    assert len(model_a.calls) == 1
+    assert model_a.calls[0].startswith(override)
+    assert not model_a.calls[0].startswith(MODEL_A_SYSTEM_INSTRUCTION)
+
+
+def test_run_demo_patient_resolves_promoted_prompt_from_ledger(tmp_path: Path) -> None:
+    """Wiring test: `resolve_artifact` over a `PromotionLedger` with an
+    active promoted `MODEL_A_PROMPT`, passed through to `run_demo_patient`,
+    drives Model A with the PROMOTED value -- not the pinned constant."""
+    ledger = PromotionLedger(tmp_path)
+    promoted_prompt = "PROMOTED MODEL A PROMPT -- from the ledger, not the pinned constant."
+    ledger.promote(
+        ImproveTarget.MODEL_A_PROMPT,
+        promoted_prompt,
+        version="v1",
+        rationale="test promotion",
+        now=_NOW,
+    )
+    resolved = resolve_artifact(
+        ImproveTarget.MODEL_A_PROMPT, MODEL_A_SYSTEM_INSTRUCTION, ledger=ledger
+    )
+    assert resolved == promoted_prompt
+
+    cassette = _load_cassette("a")
+    repo = InMemoryRunRepository()
+    task = RunTask(run_id="test-run-ledger-promoted", patient_id="patient-a")
+    model_a = _model_a_client(cassette, patient_id="patient-a")
+
+    checkpoint = run_demo_patient(
+        task,
+        model_a=model_a,
+        model_b=_model_b_client(cassette),
+        repo=repo,
+        clock=lambda: _NOW,
+        model_a_system_instruction=resolved,
+    )
+
+    assert is_terminal(checkpoint.status)
+    assert model_a.calls[0].startswith(promoted_prompt)
+
+
+def test_run_demo_patient_resolves_pinned_default_from_empty_ledger(tmp_path: Path) -> None:
+    """The same wiring with an EMPTY ledger resolves back to the pinned
+    constant -- byte-identical to not consulting the ledger at all."""
+    ledger = PromotionLedger(tmp_path)
+    resolved = resolve_artifact(
+        ImproveTarget.MODEL_A_PROMPT, MODEL_A_SYSTEM_INSTRUCTION, ledger=ledger
+    )
+    assert resolved == MODEL_A_SYSTEM_INSTRUCTION
+
+    cassette = _load_cassette("a")
+    repo = InMemoryRunRepository()
+    task = RunTask(run_id="test-run-ledger-empty", patient_id="patient-a")
+    model_a = _model_a_client(cassette, patient_id="patient-a")
+
+    checkpoint = run_demo_patient(
+        task,
+        model_a=model_a,
+        model_b=_model_b_client(cassette),
+        repo=repo,
+        clock=lambda: _NOW,
+        model_a_system_instruction=resolved,
+    )
+
+    assert is_terminal(checkpoint.status)
+    assert model_a.calls[0].startswith(MODEL_A_SYSTEM_INSTRUCTION)
+
+
+# --------------------------------------------------------------------------
+# _resolve_live_model_a_system_instruction: the actual resolution helper
+# `live_process_patient_handler` calls. `IMPROVE_LEDGER_DIR` is monkeypatched
+# to `tmp_path` in both tests so nothing ever writes into the real
+# `app/improve/data/` directory (that dir does not exist in a fresh checkout;
+# a `PromotionLedger` would `mkdir` it as a side effect of construction).
+# --------------------------------------------------------------------------
+
+
+def test_resolve_live_model_a_system_instruction_default_with_empty_ledger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An empty ledger (true of every deployment before any promotion) ->
+    the pinned `MODEL_A_SYSTEM_INSTRUCTION`, byte-identical to before the
+    ledger-consuming wiring existed."""
+    monkeypatch.setattr(api_composition, "IMPROVE_LEDGER_DIR", tmp_path)
+
+    resolved = api_composition._resolve_live_model_a_system_instruction()
+
+    assert resolved == MODEL_A_SYSTEM_INSTRUCTION
+
+
+def test_resolve_live_model_a_system_instruction_returns_promoted_value(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ledger with an active promoted `MODEL_A_PROMPT` at `IMPROVE_LEDGER_DIR`
+    -> that promoted value, not the pinned constant."""
+    monkeypatch.setattr(api_composition, "IMPROVE_LEDGER_DIR", tmp_path)
+    promoted_prompt = "LIVE-RESOLVED PROMOTED PROMPT -- from the ledger."
+    PromotionLedger(tmp_path).promote(
+        ImproveTarget.MODEL_A_PROMPT,
+        promoted_prompt,
+        version="v1",
+        rationale="test promotion",
+        now=_NOW,
+    )
+
+    resolved = api_composition._resolve_live_model_a_system_instruction()
+
+    assert resolved == promoted_prompt
 
 
 # --------------------------------------------------------------------------

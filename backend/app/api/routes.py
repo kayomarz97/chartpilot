@@ -56,7 +56,6 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
@@ -64,6 +63,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.api.auth import require_oidc
 from app.api.composition import (
+    IMPROVE_LEDGER_DIR,
     DemoAppointmentSource,
     build_live_queue,
     build_run_repository,
@@ -298,22 +298,18 @@ def record_clinician_action(
 # happens if the cycle accepts a candidate (fail-closed otherwise).
 # --------------------------------------------------------------------------
 
-#: Real (production) ledger location, created on first promotion. `app/`
-#: is packaged into the container (`app.api.composition.DEMO_DATA_DIR`'s
-#: docstring), but this directory starts empty and is meant to accumulate
-#: state at runtime, not to be baked into the image with content -- see
-#: `.gitignore`.
-_IMPROVE_LEDGER_DIR = Path(__file__).resolve().parent.parent / "improve" / "data" / "ledger"
-
 
 def get_improve_ledger() -> PromotionLedger:
     """Real (production) `PromotionLedger` provider: file-backed under
-    `app/improve/data/ledger`. Tests MUST override this via
-    `app.dependency_overrides[get_improve_ledger]` with a
-    `PromotionLedger(tmp_path)` so the hermetic suite never writes into the
-    repo.
+    `app/improve/data/ledger` (`app.api.composition.IMPROVE_LEDGER_DIR` --
+    the SAME constant `app.api.composition.live_process_patient_handler`
+    reads from, so a promotion made here is visible to that read path on
+    the same instance; see that module's ephemeral-disk caveat). Tests
+    MUST override this via `app.dependency_overrides[get_improve_ledger]`
+    with a `PromotionLedger(tmp_path)` so the hermetic suite never writes
+    into the repo.
     """
-    return PromotionLedger(_IMPROVE_LEDGER_DIR)
+    return PromotionLedger(IMPROVE_LEDGER_DIR)
 
 
 class ImproveRunRequest(BaseModel):

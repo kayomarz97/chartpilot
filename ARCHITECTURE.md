@@ -143,16 +143,16 @@ surface as a status (`FAILED`/`FLAGGED_FOR_REVIEW`), never a silent "no findings
 | `improve/evaluator.py` | `ScoreFn` type alias, **`compare_metrics(before, after)->(improved, regressed)`** (higher set_d_blocked/set_m_caught/clinician_agreement better, higher false_reject worse; ANY regression blocks), **`evaluate_candidate(candidate, *, active_value, score_fn)`** (`accept = improved and not regressed`), **`build_benchmark_score_fn(dataset_holdout)->ScoreFn`** — the concrete hermetic default (frozen §22 corruption suite via a fixed fixture + reference Model-B stand-in, plus holdout `clinician_agreement`; **never varies with the candidate value** — no live model call, see its docstring). **`clinician_agreement_from_holdout(dataset_holdout)->float`** — public, also reused by `evaluator_live.py`. |
 | `improve/evaluator_live.py` | **`build_live_pipeline_score_fn(*, benchmark, run_pipeline, dataset_holdout=None)->ScoreFn`** — the REAL, LIVE default: runs every benchmark patient id through the injected `run_pipeline` (closes over `run_patient(model_a_system_instruction=candidate)`) and scores the fraction of external-evidence `CitationResult`s with `verdict==VERIFIED_SPAN`, encoded as basis points (0–10000) split across `Metrics.set_d_blocked` (higher better) / `Metrics.false_reject` (lower better) so it behaves as a genuine rate, not a gameable raw count; `set_m_caught` held at `0`; `clinician_agreement` from `evaluator.clinician_agreement_from_holdout` or a neutral `1.0`. An empty candidate string (`""`, `run_improvement_cycle`'s "nothing promoted yet" sentinel) maps to `None` so the pinned default prompt scores the baseline, never a literal empty instruction. LIVE (token-costing); wired by `app.api.composition.get_improve_score_fn`. |
 | `improve/promote.py` | **`PromotionLedger(base_dir)`** — append-only, file-backed (`.active(target)`, `.active_value(target)`, `.promote(target, value, *, version, rationale, now)`, `.rollback(target)`; no clock/RNG, caller-supplied `now`/`version`). **`canary_compare(candidate_value, active_value, *, score_fn)->bool`** — second independent regression check before promotion. |
-| `improve/registry.py` | **`resolve_artifact(target, default, *, ledger=None)->str`** — empty/`None` ledger returns `default` byte-identical. **Deliberately NOT wired into `run_patient`** — opt-in only (see below). |
+| `improve/registry.py` | **`resolve_artifact(target, default, *, ledger=None)->str`** — empty/`None` ledger returns `default` byte-identical. Wired into the LIVE per-patient worker path via `app.api.composition.live_process_patient_handler` (see below and "self-improving loop" section). |
 | `improve/cycle.py` | **`run_improvement_cycle(*, presentations, clinician_actions, target, generate, score_fn, ledger, now, version)->ImprovementReport`** — collect → split → propose(train) → evaluate(holdout) → canary → promote; wraps propose/evaluate and canary/promote in `try/except Exception`, fail-closed (never raises, never promotes on uncertainty). |
 | `improve/data/ledger/` | Runtime-only `PromotionLedger` storage (gitignored) — never hand-edited, never committed. |
 
 ### API + config — `app/api/`, `app/config.py`, `app/main.py`
 | Path | Key symbols |
 |---|---|
-| `api/routes.py` | **`router`**; `POST /enqueue-run` + `POST /tasks/process-patient` (OIDC via `require_oidc`); **`GET /runs/{run_id}` PUBLIC** (returns `list_presentations`, `[]` not 404 for unknown); **`POST /runs/{run_id}/patients/{patient_id}/clinician-action`** (Phase B, OIDC via `require_oidc`) — persists one `ClinicianAction` (body: `claim_id, action, note="", verdict_shown=None, action_id`) via `write_documents(clinician_actions_collection_path(...), ...)`, `action_id` as doc id for idempotent re-submit; reached only via the frontend's authenticated proxy, never a direct browser call. **`POST /improve-run`** (Phase C, OIDC via `require_oidc`) — body `run_id, target=model_a_prompt, version`; reads `list_presentations(run_id)` + every patient's `clinician_actions` subcollection, runs `app.improve.cycle.run_improvement_cycle`, returns its `ImprovementReport`; its only possible write is an append to the injected `PromotionLedger`, on acceptance only. DI providers `get_queue`, `get_run_repository`, `get_process_patient_handler`, `get_clock`, `get_improve_generator`/`get_improve_score_fn` (from `app.api.composition`), `get_improve_ledger` (default dir `app/improve/data/ledger`). |
+| `api/routes.py` | **`router`**; `POST /enqueue-run` + `POST /tasks/process-patient` (OIDC via `require_oidc`); **`GET /runs/{run_id}` PUBLIC** (returns `list_presentations`, `[]` not 404 for unknown); **`POST /runs/{run_id}/patients/{patient_id}/clinician-action`** (Phase B, OIDC via `require_oidc`) — persists one `ClinicianAction` (body: `claim_id, action, note="", verdict_shown=None, action_id`) via `write_documents(clinician_actions_collection_path(...), ...)`, `action_id` as doc id for idempotent re-submit; reached only via the frontend's authenticated proxy, never a direct browser call. **`POST /improve-run`** (Phase C, OIDC via `require_oidc`) — body `run_id, target=model_a_prompt, version`; reads `list_presentations(run_id)` + every patient's `clinician_actions` subcollection, runs `app.improve.cycle.run_improvement_cycle`, returns its `ImprovementReport`; its only possible write is an append to the injected `PromotionLedger`, on acceptance only. DI providers `get_queue`, `get_run_repository`, `get_process_patient_handler`, `get_clock`, `get_improve_generator`/`get_improve_score_fn` (from `app.api.composition`), `get_improve_ledger` (`PromotionLedger(IMPROVE_LEDGER_DIR)` — imports the constant from `app.api.composition` rather than redefining it, since `live_process_patient_handler` reads the same ledger location). |
 | `api/presentation.py` | **`build_presentation(result, *, patient_name)->dict`** — camelCase UI payload (`patientId/status/findings/timeline/labs`; each finding also carries `revisionAttempts` from `FindingResult.revision_attempts`, Phase B). Pure. `_LAB_THRESHOLDS` (potassium/sodium/creatinine/egfr, egfr `inverted`). |
-| `api/composition.py` | **`live_process_patient_handler(task)`** (prod wiring: real Gemini + Firestore), **`run_demo_patient(...)`** (hermetic), `build_run_repository`, `build_live_queue`, `DEMO_PATIENT_IDS`. Phase C, both **`# VERIFY-LIVE`** (real, token-costing network calls; never called by the hermetic suite): **`get_improve_generator()->Generator`** builds `app.improve.proposer_llm.LlmProposer` against a real Model-A Gemini client, `current_prompt=agent.prompts.MODEL_A_SYSTEM_INSTRUCTION` (the pinned default — does NOT read the promotion ledger yet, see its docstring); **`get_improve_score_fn()->Callable[[Dataset], ScoreFn]`** builds `app.improve.evaluator_live.build_live_pipeline_score_fn` over `DEMO_PATIENT_IDS`, with `run_pipeline` closing over real Gemini clients + `run_patient(model_a_system_instruction=...)` — the `/improve-run` composition-root providers, now genuinely candidate-dependent (replaces the former no-op placeholder + hermetic `build_benchmark_score_fn` default). |
+| `api/composition.py` | **`live_process_patient_handler(task)`** (prod wiring: real Gemini + Firestore; as of Phase C step (b), also resolves the LIVE Model-A prompt from the promotion ledger via `_resolve_live_model_a_system_instruction()` — `PromotionLedger(IMPROVE_LEDGER_DIR)` + `resolve_artifact(ImproveTarget.MODEL_A_PROMPT, MODEL_A_SYSTEM_INSTRUCTION, ledger=...)`, fail-safe on any ledger error, Cloud Run ephemeral-disk caveat documented on that helper and in the "self-improving loop" section below), **`run_demo_patient(..., model_a_system_instruction=None)`** (hermetic; the param passes straight through to `run_patient`, `None` byte-identical to before), `IMPROVE_LEDGER_DIR` (`app/improve/data/ledger` — exported here, reused as-is by `app.api.routes.get_improve_ledger`, one shared constant), `build_run_repository`, `build_live_queue`, `DEMO_PATIENT_IDS`. Phase C, both **`# VERIFY-LIVE`** (real, token-costing network calls; never called by the hermetic suite): **`get_improve_generator()->Generator`** builds `app.improve.proposer_llm.LlmProposer` against a real Model-A Gemini client, `current_prompt=agent.prompts.MODEL_A_SYSTEM_INSTRUCTION` (the pinned default — does NOT read the promotion ledger yet, see its docstring); **`get_improve_score_fn()->Callable[[Dataset], ScoreFn]`** builds `app.improve.evaluator_live.build_live_pipeline_score_fn` over `DEMO_PATIENT_IDS`, with `run_pipeline` closing over real Gemini clients + `run_patient(model_a_system_instruction=...)` — the `/improve-run` composition-root providers, now genuinely candidate-dependent (replaces the former no-op placeholder + hermetic `build_benchmark_score_fn` default). |
 | `api/auth.py` | `require_oidc` — fails CLOSED if `oidc_audience` unset. |
 | `config.py` | **`Settings(BaseSettings)`**, **`get_settings()`** (`@lru_cache`; import never raises; tests call `get_settings.cache_clear()`). |
 | `main.py` | **`app = FastAPI(title="ChartPilot Backend")`**; `GET /health` (503 lists `missing_fields` names only). CORS `methods=["GET"]`. `DEFAULT_PORT=8000`. |
@@ -263,20 +263,35 @@ benchmark) is never imported by `app/improve/` in a way that mutates it --
 `evaluator.py::build_benchmark_score_fn` only calls `measure_suite`/reads `SET_M_CORRUPTIONS`,
 exactly like `tests/unit/test_corruption_suite.py` does.
 
-**Determinism preserved:** `agent/prompts.py::MODEL_A_SYSTEM_INSTRUCTION` stays a pinned Python
-constant; `app/improve/registry.py::resolve_artifact(target, default, *, ledger=None)` returns the
-ledger's active promoted value if one exists, else `default` -- an empty ledger (true of every
-deployment today) is byte-identical to not calling it. **`resolve_artifact` is deliberately NOT
-wired into `app.pipeline.runner.run_patient`** by this phase -- live consumption of a promoted
-artifact is a separate, explicitly-reviewed opt-in decision with its own blast radius (a promoted
-prompt actually driving Model A calls in production), left for a later change. `POST /improve-run`
-(`app/api/routes.py`) can accept and promote a candidate into the ledger today; nothing reads that
-ledger back into the live pipeline yet. `run_patient` DOES now accept an explicit
-`model_a_system_instruction` override (a separate, generic seam, not `resolve_artifact`) so the
-LIVE evaluator (`app.improve.evaluator_live.build_live_pipeline_score_fn`) can run a CANDIDATE
-prompt against a real benchmark patient during scoring -- `app.api.composition.run_demo_patient`/
-`live_process_patient_handler` (the actual production per-patient worker path) never pass this
-argument, so the deployed pipeline still always uses the pinned default, unchanged.
+**Determinism preserved, live consumption now wired (Phase C step (b)):**
+`agent/prompts.py::MODEL_A_SYSTEM_INSTRUCTION` stays a pinned Python constant;
+`app/improve/registry.py::resolve_artifact(target, default, *, ledger=None)` returns the ledger's
+active promoted value if one exists, else `default` -- an empty ledger (true of every deployment
+before its first accepted promotion) is byte-identical to not calling it. `run_patient` accepts an
+explicit `model_a_system_instruction` override (`None` default -> the pinned constant, unchanged);
+`app.api.composition.run_demo_patient` passes this straight through, defaulting to `None` so every
+existing caller is unaffected. Two live consumers now use this seam:
+- The LIVE evaluator (`app.improve.evaluator_live.build_live_pipeline_score_fn`) runs a CANDIDATE
+  prompt against a real benchmark patient during `POST /improve-run` scoring -- unchanged from
+  before.
+- **`app.api.composition.live_process_patient_handler`** (the actual production per-patient worker
+  path, reached via `POST /tasks/process-patient`) now calls a new helper,
+  `_resolve_live_model_a_system_instruction()`, which builds a `PromotionLedger(IMPROVE_LEDGER_DIR)`
+  and resolves `ImproveTarget.MODEL_A_PROMPT` through `resolve_artifact` before every patient run,
+  passing the result into `run_demo_patient`. An empty ledger resolves back to the pinned constant,
+  byte-identical to before this wiring existed; any ledger read/parse error (missing/unreadable
+  dir, permission error, a corrupted ledger or artifact file) is caught and also falls back to the
+  pinned constant -- a ledger problem must never break a patient run.
+  **Ledger durability caveat (Cloud Run):** `IMPROVE_LEDGER_DIR`
+  (`app/improve/data/ledger`, exported from `app.api.composition`, reused as-is by
+  `app.api.routes.get_improve_ledger` -- one shared constant, not two) is a path on the Cloud Run
+  CONTAINER's local disk, which is EPHEMERAL: scoped to one instance, lost on that instance's
+  restart/redeploy/scale-to-zero, and never shared with any other concurrently-running instance. A
+  promotion accepted by `POST /improve-run` therefore does NOT durably change what production
+  serves today -- it only affects the instance(s) alive at promotion time, only until they cycle.
+  This is a known, documented gap, not a claimed safety property: durable ledger storage
+  (Firestore or GCS, matching `app.storage.firestore_repo`'s already-durable pattern) is a needed
+  follow-up before promotion is a trustworthy production lever.
 
 **Fail-closed:** `app/improve/cycle.py::run_improvement_cycle` wraps propose/evaluate and
 canary/promote in `try/except Exception`, returning a rejected `ImprovementReport` (never raising,

@@ -40,9 +40,11 @@ from app.fhir.transport import LocalFixtureTransport
 from app.gate.models import STAGE_ORDER, PatientStage, PatientStatus, is_terminal
 from app.improve.evaluator import ScoreFn
 from app.improve.evaluator_live import build_live_pipeline_score_fn
-from app.improve.models import Dataset
+from app.improve.models import Dataset, ImproveTarget
+from app.improve.promote import PromotionLedger
 from app.improve.proposer import Generator
 from app.improve.proposer_llm import LlmProposer
+from app.improve.registry import resolve_artifact
 from app.pipeline.demo_evidence import load_demo_snapshot
 from app.pipeline.models import PatientRunResult
 from app.pipeline.runner import run_patient
@@ -54,6 +56,7 @@ from app.tasks.models import Checkpoint, RunTask
 __all__ = [
     "DEMO_DATA_DIR",
     "DEMO_PATIENT_IDS",
+    "IMPROVE_LEDGER_DIR",
     "run_demo_patient",
     "live_process_patient_handler",
     "DemoAppointmentSource",
@@ -67,6 +70,16 @@ __all__ = [
 #: at build time (the Dockerfile `COPY`s `app`, unlike `tests/`, which
 #: `.dockerignore` excludes -- see that file's "Tests / fixtures" section).
 DEMO_DATA_DIR = Path(__file__).resolve().parent.parent / "demo_data"
+
+#: Real (production) `PromotionLedger` location, created on first
+#: promotion. `app/` is packaged into the container (see `DEMO_DATA_DIR`'s
+#: docstring above), but this directory starts empty and is meant to
+#: accumulate state at runtime, not to be baked into the image with content
+#: -- see `.gitignore`. THE SAME constant `app.api.routes.get_improve_ledger`
+#: uses (imported from here, not redefined there) and that
+#: `live_process_patient_handler` below reads from -- one ledger location,
+#: shared by the write path (`POST /improve-run`) and the live read path.
+IMPROVE_LEDGER_DIR = Path(__file__).resolve().parent.parent / "improve" / "data" / "ledger"
 
 #: The FHIR `Patient.id` of every packaged demo bundle (see module docstring
 #: for why these are hyphenated, not the underscored filename stems).
@@ -128,6 +141,7 @@ def run_demo_patient(
     model_b: GeminiClient,
     repo: RunRepository,
     clock: Callable[[], datetime],
+    model_a_system_instruction: str | None = None,
 ) -> Checkpoint:
     """Run one demo patient through the full pipeline, or short-circuit on a
     terminal checkpoint if it already ran (spec §46 idempotency).
@@ -135,6 +149,15 @@ def run_demo_patient(
     Pure/hermetic: every dependency is injected, so this is exercised
     end-to-end by `tests/unit/test_composition.py` with a
     `FakeGeminiClient` + `InMemoryRunRepository` -- no network, ever.
+
+    `model_a_system_instruction` (Phase C step (b)): passed straight through
+    to `app.pipeline.runner.run_patient`'s own parameter of the same name.
+    `None` (the default) is byte-for-byte identical to before this parameter
+    existed -- Model A's AI_REASONING turn uses the pinned
+    `app.agent.prompts.MODEL_A_SYSTEM_INSTRUCTION`, unchanged. A caller
+    passes an explicit string to drive that turn with a DIFFERENT prompt for
+    this call only (e.g. `live_process_patient_handler` resolving the
+    active promoted prompt from the ledger below).
     """
     existing = repo.get_patient_summary(task.run_id, task.patient_id)
     if existing is not None and is_terminal(existing.status):
@@ -160,6 +183,7 @@ def run_demo_patient(
         clock=clock,
         repo=repo,
         run_id=task.run_id,
+        model_a_system_instruction=model_a_system_instruction,
     )
 
     # TD-011: persist the UI-shaped presentation payload alongside the
@@ -214,19 +238,63 @@ def build_run_repository(settings: Settings) -> RunRepository:
     )
 
 
+def _resolve_live_model_a_system_instruction() -> str:
+    """The Model-A system instruction `live_process_patient_handler` should
+    drive this run with: the ledger's active promoted `MODEL_A_PROMPT`
+    version if one exists, else the pinned `MODEL_A_SYSTEM_INSTRUCTION`
+    (spec §53 Phase C step (b), `app.improve.registry.resolve_artifact`).
+
+    HONESTY NOTE -- ledger durability: `IMPROVE_LEDGER_DIR` is a path on the
+    Cloud Run CONTAINER's local disk, which is EPHEMERAL -- scoped to one
+    instance, and lost on that instance's restart, redeploy, or scale-to-
+    zero, and never shared with any other concurrently-running instance
+    (Cloud Run may run several). A promotion accepted by `POST
+    /improve-run` therefore does NOT durably change what production serves
+    today: it only affects the same instance, only until it cycles, and
+    other instances handling other requests never see it at all. This is a
+    real gap, not a documented feature -- durable ledger storage (Firestore
+    or GCS, matching `app.storage.firestore_repo`'s already-durable pattern)
+    is a needed follow-up before promotion is a trustworthy production
+    lever. See `ARCHITECTURE.md`'s "self-improving loop" section.
+
+    Fails safe: any error reading/parsing the ledger (missing/unreadable
+    directory, permission error, a corrupted ledger or artifact file) falls
+    back to the pinned constant -- exactly as if the ledger were empty --
+    rather than ever breaking a patient run over ledger state.
+    """
+    try:
+        ledger = PromotionLedger(IMPROVE_LEDGER_DIR)
+        return resolve_artifact(
+            ImproveTarget.MODEL_A_PROMPT, MODEL_A_SYSTEM_INSTRUCTION, ledger=ledger
+        )
+    except Exception:  # noqa: BLE001 -- fail safe, never let ledger state break a patient run
+        return MODEL_A_SYSTEM_INSTRUCTION
+
+
 def live_process_patient_handler(task: RunTask) -> Checkpoint:
     """Real (production) `process_patient` wiring: real Gemini + real
     Firestore, delegating to the pure `run_demo_patient` core.
 
     This is the only place the real network deps are constructed for the
     per-patient worker path -- everything else in this module is injectable
-    and hermetically tested.
+    and hermetically tested. As of Phase C step (b), also the only place
+    that resolves the LIVE Model-A prompt from the promotion ledger (see
+    `_resolve_live_model_a_system_instruction`'s docstring for the Cloud Run
+    ephemeral-disk caveat) -- an empty ledger (true of every deployment
+    until the first accepted promotion) resolves to the pinned
+    `MODEL_A_SYSTEM_INSTRUCTION`, byte-identical to before this existed.
     """
     settings = get_settings()
     model_a, model_b = _build_live_gemini_clients(settings)
     repo = build_run_repository(settings)
+    model_a_system_instruction = _resolve_live_model_a_system_instruction()
     return run_demo_patient(
-        task, model_a=model_a, model_b=model_b, repo=repo, clock=lambda: datetime.now(UTC)
+        task,
+        model_a=model_a,
+        model_b=model_b,
+        repo=repo,
+        clock=lambda: datetime.now(UTC),
+        model_a_system_instruction=model_a_system_instruction,
     )
 
 
