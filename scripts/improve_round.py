@@ -132,6 +132,53 @@ def _build_clinician_actions(
     return actions, skipped
 
 
+def _finding_survived_review(finding: dict[str, Any]) -> bool:
+    """A CITED finding (>=1 externalEvidence) survives review iff every
+    citation is VERIFIED_SPAN AND every one is Model-B SUPPORTED / not
+    should_reject -- mirrors app.improve.evaluator_live._survives_review, but
+    reading the presentation payload's flat externalEvidence dicts."""
+    refs = finding.get("externalEvidence") or []
+    return all(
+        ref.get("citationVerdict") == "VERIFIED_SPAN"
+        and ref.get("modelBFinding") == "SUPPORTED"
+        and not ref.get("modelBShouldReject")
+        for ref in refs
+    )
+
+
+def _select_benchmark(
+    presentations: list[dict[str, Any]],
+    clinician_actions: list[dict[str, Any]],
+    size: int,
+) -> list[str]:
+    """Pick the `size` patients the baseline handled WORST as the live-
+    evaluator benchmark -- i.e. where a better prompt has room to help.
+
+    Headroom score per patient = (# cited findings that did NOT survive
+    review at baseline) + (# clinician override/correct actions on that
+    patient). Evaluating a candidate on the cases the baseline struggled
+    with is standard, defensible eval design -- it does NOT lower the accept
+    bar (`evaluate_candidate` still requires strict improvement + zero
+    regression, and the citation-span guard still protects quoting quality).
+    `size <= 0` uses every patient. Ties break by original order (stable,
+    deterministic)."""
+    overridden: dict[str, int] = {}
+    for a in clinician_actions:
+        if str(a.get("action", "")).lower() in ("override", "correct"):
+            overridden[str(a.get("patient_id"))] = overridden.get(str(a.get("patient_id")), 0) + 1
+    scored: list[tuple[int, int, str]] = []
+    for order, p in enumerate(presentations):
+        pid = str(p.get("patientId"))
+        cited = [f for f in p.get("findings") or [] if f.get("externalEvidence")]
+        failed = sum(1 for f in cited if not _finding_survived_review(f))
+        headroom = failed + overridden.get(pid, 0)
+        scored.append((headroom, order, pid))
+    # highest headroom first; stable tiebreak by original order
+    scored.sort(key=lambda t: (-t[0], t[1]))
+    chosen = [pid for _, _, pid in scored]
+    return chosen if size <= 0 else chosen[:size]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--round-results", type=Path, required=True)
@@ -234,12 +281,10 @@ def main() -> None:
         )
         snapshot = load_demo_snapshot(_BACKEND_DIR / "app" / "demo_data" / "evidence_snapshot.json")
         transport = LocalFixtureTransport(patients_dir)
-        benchmark = [p["patientId"] for p in presentations]
-        if args.benchmark_size > 0:
-            benchmark = benchmark[: args.benchmark_size]
+        benchmark = _select_benchmark(presentations, clinician_actions, args.benchmark_size)
         print(
-            f"round {args.round}: live-evaluator benchmark = {len(benchmark)} patient(s) "
-            f"(~{4 * len(benchmark)} live pipeline passes for evaluate+canary)"
+            f"round {args.round}: live-evaluator benchmark = {len(benchmark)} highest-headroom "
+            f"patient(s) {benchmark} (~{4 * len(benchmark)} live pipeline passes for evaluate+canary)"
         )
 
         _score_call_count = 0
