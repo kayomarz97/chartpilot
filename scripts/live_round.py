@@ -117,11 +117,20 @@ def main() -> None:
             f"round {round_num}: LIVE Gemini -- Model A: {settings.model_a_id}  "
             f"Model B: {settings.model_b_id}"
         )
+        # Longer backoff than the 3x2s default so a transient per-minute
+        # rate limit (429 / "high demand") clears via retry instead of
+        # failing a patient run outright (see improve_round.py's note).
         model_a = GeminiInteractionsClient(
-            api_key=settings.gemini_api_key, model_id=settings.model_a_id
+            api_key=settings.gemini_api_key,
+            model_id=settings.model_a_id,
+            max_retries=6,
+            retry_backoff_s=10.0,
         )
         model_b = GeminiInteractionsClient(
-            api_key=settings.gemini_api_key, model_id=settings.model_b_id
+            api_key=settings.gemini_api_key,
+            model_id=settings.model_b_id,
+            max_retries=6,
+            retry_backoff_s=10.0,
         )
 
     snapshot_path = _BACKEND_DIR / "app" / "demo_data" / "evidence_snapshot.json"

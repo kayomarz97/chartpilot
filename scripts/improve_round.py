@@ -268,16 +268,21 @@ def main() -> None:
             f"round {args.round}: LIVE Gemini -- Model A: {settings.model_a_id}  "
             f"Model B: {settings.model_b_id}"
         )
+        # Longer backoff than the 3x2s default: an improve cycle fires ~4*N
+        # benchmark passes (x2 models) in quick succession and trips a
+        # per-minute rate limit; 6 retries at 10s base clears a 60s window
+        # instead of failing fast (~16s) and silently contributing (0,0).
+        _RETRY = {"max_retries": 6, "retry_backoff_s": 10.0}
         proposer_client = GeminiInteractionsClient(
-            api_key=settings.gemini_api_key, model_id=settings.model_a_id
+            api_key=settings.gemini_api_key, model_id=settings.model_a_id, **_RETRY
         )
         generate = LlmProposer(proposer_client, current_prompt=active_prompt)
 
         score_model_a = GeminiInteractionsClient(
-            api_key=settings.gemini_api_key, model_id=settings.model_a_id
+            api_key=settings.gemini_api_key, model_id=settings.model_a_id, **_RETRY
         )
         score_model_b = GeminiInteractionsClient(
-            api_key=settings.gemini_api_key, model_id=settings.model_b_id
+            api_key=settings.gemini_api_key, model_id=settings.model_b_id, **_RETRY
         )
         snapshot = load_demo_snapshot(_BACKEND_DIR / "app" / "demo_data" / "evidence_snapshot.json")
         transport = LocalFixtureTransport(patients_dir)
