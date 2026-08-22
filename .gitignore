@@ -41,3 +41,9 @@ out/
 
 # Local phase evidence is committed (spec §65) — do NOT ignore evidence/phase_*.txt
 
+# scripts/live_run/artifacts/ — run OUTPUT of the accelerated 4-round self-improving
+# live run (generated patients, round_results.json, improve_result.json, the
+# FilePromotionLedger dir, trajectory.json/.md): reproducible from the scripts, not
+# source. Summary numbers get copied into EVALUATION.md by hand, not this directory.
+scripts/live_run/artifacts/
+
