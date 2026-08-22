@@ -44,12 +44,13 @@ SECURE LIVE-DATA ARCHITECTURE (changed from the naive plan mid-integration): bac
   dedicated chartpilot-frontend-sa (run.invoker on backend) and calls the private backend; browser hits
   same-origin /api/runs. PROVEN LIVE: /api/runs returns backend data (200). Frontend redeployed (rev 2) with
   BACKEND_URL env + the SA (infra/70_deploy_frontend.sh updated). Backend redeployed rev 6 (IMAGE_TAG v3).
-⚠️ BLOCKER (USER ACTION): the ChartPilot Gemini API key hit its MONTHLY SPEND CAP — confirmed 429 "project has
-  exceeded its monthly spending cap" with the ambient Iatronix GOOGLE_API_KEY unset, so it is OUR chartpilot Gemini
-  project's cap, NOT Iatronix. So runs/demo currently = 5 FAILED presentations. The UI's fallback was hardened to
-  fall back to demo data unless ≥1 live patient is non-error, so the site shows the polished demo now and flips to
-  "Live data" automatically once the cap is raised + the demo run re-triggered. USER must raise cap at
-  https://ai.studio/spend (or wait for monthly reset), then re-run: scheduler body {"run_id":"demo"} → trigger.
+✅ RESOLVED (2026-08-22, user): the ChartPilot Gemini MONTHLY SPEND CAP has been RAISED by the user — live
+  Gemini calls are unblocked again. (History: the key had hit its cap → 429 "project has exceeded its monthly
+  spending cap"; it was OUR chartpilot project's cap, not Iatronix, confirmed with the ambient GOOGLE_API_KEY
+  unset. While capped, runs/demo returned 5 FAILED presentations and the UI showed its hardened demo-data
+  fallback.) With the cap raised, live runs can proceed: re-trigger via scheduler body {"run_id":"demo"} and
+  the UI flips to "Live data" automatically once ≥1 live patient is non-error. This unblocks the planned 4-day
+  self-improving live run (see Current Status).
 LIVE URLs (unchanged): frontend https://chartpilot-frontend-zkhsg5lcca-el.a.run.app ; backend (private)
   https://chartpilot-api-zkhsg5lcca-el.a.run.app . Both healthy. Ambient-key hazard (TD-002) re-confirmed: local
   runs must `unset GOOGLE_API_KEY`; deployed Cloud Run is clean (only GEMINI_API_KEY from Secret Manager).
