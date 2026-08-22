@@ -47,7 +47,13 @@ from app.review.models import (
     ReviewFinding,
 )
 
-__all__ = ["ScoreFn", "compare_metrics", "evaluate_candidate", "build_benchmark_score_fn"]
+__all__ = [
+    "ScoreFn",
+    "compare_metrics",
+    "evaluate_candidate",
+    "build_benchmark_score_fn",
+    "clinician_agreement_from_holdout",
+]
 
 #: Scores an artifact VALUE (e.g. a candidate or the active Model-A prompt
 #: text) against the frozen benchmark + the holdout clinician cases.
@@ -247,7 +253,7 @@ def _reference_model_b(name: str, packet: ModelBPacket) -> ModelBVerdict:
     )
 
 
-def _clinician_agreement(dataset_holdout: Dataset) -> float:
+def clinician_agreement_from_holdout(dataset_holdout: Dataset) -> float:
     """Fraction of LABELED holdout cases where the clinician's action
     agrees with the automated outcome: a CONFIRM agrees iff the automated
     layer did NOT flag the case; an OVERRIDE/CORRECT agrees iff it DID.
@@ -257,6 +263,11 @@ def _clinician_agreement(dataset_holdout: Dataset) -> float:
     disagree with. No labeled cases at all -> trivially `1.0` (mirrors
     `app.review.corruption.release_threshold_met`'s empty-set convention:
     an axis with nothing to measure imposes no penalty).
+
+    Public (not `_`-prefixed): also reused by `app.improve.evaluator_live.
+    build_live_pipeline_score_fn` so the live `ScoreFn`'s `clinician_
+    agreement` axis is computed by the exact same rule as this hermetic
+    default's, rather than a second, potentially-drifting copy.
     """
     agreed = 0
     total = 0
@@ -310,7 +321,7 @@ def build_benchmark_score_fn(dataset_holdout: Dataset) -> ScoreFn:
             snapshot=snapshot,
         )
     ]
-    agreement = _clinician_agreement(dataset_holdout)
+    agreement = clinician_agreement_from_holdout(dataset_holdout)
 
     def score(value: str) -> Metrics:
         del value  # see docstring: cannot vary without a live model call

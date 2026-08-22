@@ -113,6 +113,7 @@ def run_patient(
     run_id: str = "demo-run",
     stage_timings: dict[str, float] | None = None,
     max_revise_iterations: int = 2,
+    model_a_system_instruction: str | None = None,
 ) -> PatientRunResult:
     """Run one patient through the full chained pipeline.
 
@@ -139,6 +140,20 @@ def run_patient(
     and the final gate all still run, unchanged, on whatever claim ends up
     final -- a claim that is still unrepaired after the budget keeps its
     failing verdict, never silently passes.
+
+    `model_a_system_instruction` (spec §53, Phase C): when `None` (the
+    default), this call is byte-for-byte identical to before this parameter
+    existed -- Model A's AI_REASONING turn uses the pinned
+    `app.agent.prompts.MODEL_A_SYSTEM_INSTRUCTION`, unchanged. When a
+    string is given, that string is used as `generate_claims`'s
+    `model_system_instruction` INSTEAD, for this call only -- this is the
+    seam the outer self-improving loop's LIVE evaluator
+    (`app.improve.evaluator_live.build_live_pipeline_score_fn`) uses to run
+    a candidate prompt against a real patient without ever mutating the
+    pinned module constant itself. Only the initial AI_REASONING turn is
+    affected; the bounded revise loop below always uses the separate fixed
+    `MODEL_A_REVISE_INSTRUCTION` regardless of this parameter (re-quoting a
+    citation span is not part of what a candidate prompt tunes).
     """
     repository = repo if repo is not None else InMemoryRunRepository()
     now = clock()
@@ -207,9 +222,14 @@ def run_patient(
         rule_results=(k_result,),
         snapshot=snapshot,
     )
+    effective_model_a_instruction = (
+        model_a_system_instruction
+        if model_a_system_instruction is not None
+        else MODEL_A_SYSTEM_INSTRUCTION
+    )
     try:
         claim_set = generate_claims(
-            model_a, model_system_instruction=MODEL_A_SYSTEM_INSTRUCTION, user_input=user_input
+            model_a, model_system_instruction=effective_model_a_instruction, user_input=user_input
         )
     except Exception as exc:  # noqa: BLE001 -- fail closed, never a crash or silent "no findings"
         _mark_stage(stage_timings, PatientStage.AI_REASONING, _stage_start)

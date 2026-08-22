@@ -9,7 +9,7 @@ in depth) for any target that is not one of the AUTO-tier
 
 from __future__ import annotations
 
-__all__ = ["ImproveError", "FrozenTargetError"]
+__all__ = ["ImproveError", "FrozenTargetError", "ProposerOutputError"]
 
 
 class ImproveError(Exception):
@@ -22,3 +22,12 @@ class FrozenTargetError(ImproveError):
     of an AUTO-tier `app.improve.models.ImproveTarget`. Always a hard stop,
     never a warning -- catching this anywhere in this package must reject
     the candidate, never proceed."""
+
+
+class ProposerOutputError(ImproveError):
+    """A live LLM-backed proposer's (`app.improve.proposer_llm.LlmProposer`)
+    structured output failed to validate. Mirrors `app.agent.errors.
+    StructuredOutputError`'s fail-closed contract (raised on ANY
+    `pydantic.ValidationError`, original exception chained as `__cause__`)
+    without making `app.improve` depend on the agent layer's own error
+    hierarchy."""

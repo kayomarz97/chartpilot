@@ -32,15 +32,19 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 from app.agent.gemini import GeminiInteractionsClient
+from app.agent.prompts import MODEL_A_SYSTEM_INSTRUCTION
 from app.agent.protocol import GeminiClient
 from app.api.presentation import build_presentation
 from app.config import Settings, get_settings
 from app.fhir.transport import LocalFixtureTransport
 from app.gate.models import STAGE_ORDER, PatientStage, PatientStatus, is_terminal
-from app.improve.evaluator import ScoreFn, build_benchmark_score_fn
-from app.improve.models import Candidate, Dataset, ImproveTarget
+from app.improve.evaluator import ScoreFn
+from app.improve.evaluator_live import build_live_pipeline_score_fn
+from app.improve.models import Dataset
 from app.improve.proposer import Generator
+from app.improve.proposer_llm import LlmProposer
 from app.pipeline.demo_evidence import load_demo_snapshot
+from app.pipeline.models import PatientRunResult
 from app.pipeline.runner import run_patient
 from app.storage.firestore_repo import FirestoreRunRepository
 from app.storage.repository import RunRepository
@@ -273,60 +277,90 @@ def build_live_queue(settings: Settings) -> CloudTasksQueue:
 
 # --------------------------------------------------------------------------
 # Phase C: outer self-improving loop -- composition-root providers for
-# `POST /improve-run` (`app.api.routes`). Both are deliberately NOT marked
-# `# VERIFY-LIVE` like `_build_live_gemini_clients`/`build_run_repository`
-# above: neither touches the network. A genuine live-model-backed proposer
-# (one that actually asks an LLM to draft a new prompt) is real new scope
-# -- its own pinned model, its own prompt, its own docs-researcher pass --
-# that this phase does not implement; see each function's docstring for why
-# that is a *safe* thing to defer, not a shortcut around this phase's
-# safety design.
+# `POST /improve-run` (`app.api.routes`). Both are marked `# VERIFY-LIVE`
+# (like `_build_live_gemini_clients`/`build_run_repository` above): each
+# constructs a real Gemini client and, for the score fn, actually runs the
+# candidate prompt through `run_patient` against the demo-patient benchmark
+# -- real, token-costing network calls. Never called by the hermetic test
+# suite; every test overrides both via
+# `app.dependency_overrides[api_routes.get_improve_generator/
+# get_improve_score_fn]` with a fake, exactly like every other network-
+# touching provider in this module.
 # --------------------------------------------------------------------------
 
 
-def _placeholder_improve_generate(dataset: Dataset, target: ImproveTarget) -> Candidate:
-    """The default (production) `Generator`: a NO-OP placeholder that
-    proposes an EMPTY `new_value` -- never a live-model-authored diff.
-
-    Combined with `build_benchmark_score_fn` (whose corruption-axis metrics
-    do not vary with the candidate's `new_value` -- see that function's
-    docstring), a candidate from this generator can never score as an
-    improvement, so `POST /improve-run` is safe to deploy today: it always
-    fail-closed rejects until a real LLM-backed proposer replaces this
-    function behind `get_improve_generator`'s dependency-injection seam
-    (everything downstream -- `propose_candidate`'s guard,
-    `evaluate_candidate`, `PromotionLedger` -- is already fully wired and
-    needs no change when that happens).
-    """
-    return Candidate(
-        target=target,
-        new_value="",
-        rationale=(
-            "placeholder generator: no live LLM-backed proposer wired yet "
-            f"(train split had {len(dataset.cases)} case(s) available)"
-        ),
-    )
-
-
 def get_improve_generator() -> Generator:
-    """Real (production) `Generator` provider for `POST /improve-run`. See
-    `_placeholder_improve_generate` for why this is deliberately a safe
-    no-op today. Tests MUST override this via
-    `app.dependency_overrides[api_routes.get_improve_generator]` with a
-    fake that actually varies its output.
+    """Real (production) `Generator` provider for `POST /improve-run`:
+    `app.improve.proposer_llm.LlmProposer` wired to a real Model-A Gemini
+    client (spec §8: the SAME pinned `model_a_id`, since this proposer's
+    job is to improve the prompt that same model is actually driven by),
+    with `current_prompt` set to the pinned `app.agent.prompts.
+    MODEL_A_SYSTEM_INSTRUCTION`.
+
+    `current_prompt` intentionally does NOT read the promotion ledger here
+    -- resolving "the prompt currently active in production" (pinned
+    default vs. a previously-promoted ledger value) is exactly what
+    `app.improve.registry.resolve_artifact` exists for, and wiring ledger
+    resolution into the LIVE pipeline is a separate, explicitly-reviewed
+    decision this phase does not make (see `ARCHITECTURE.md`'s
+    "self-improving loop" section) -- this provider proposes improvements
+    against the pinned constant only, for now.
+
+    # VERIFY-LIVE: constructs a real `GeminiInteractionsClient`; never
+    # called by the hermetic test suite. Tests MUST override this via
+    # `app.dependency_overrides[api_routes.get_improve_generator]` with a
+    # fake that actually varies its output.
     """
-    return _placeholder_improve_generate
+    settings = get_settings()
+    model_a: GeminiClient = GeminiInteractionsClient(
+        api_key=settings.gemini_api_key, model_id=settings.model_a_id
+    )
+    return LlmProposer(model_a, current_prompt=MODEL_A_SYSTEM_INSTRUCTION)
 
 
 def get_improve_score_fn() -> Callable[[Dataset], ScoreFn]:
-    """Real (production) `ScoreFn`-factory provider for `POST /improve-run`.
+    """Real (production) `ScoreFn`-factory provider for `POST /improve-run`:
+    `app.improve.evaluator_live.build_live_pipeline_score_fn` over the
+    packaged demo-patient benchmark (`DEMO_PATIENT_IDS`), with
+    `run_pipeline` closing over real Gemini clients + `run_patient` -- so
+    scoring a candidate ACTUALLY runs it end to end and measures its
+    citation verified-span rate, replacing the previous hermetic default
+    (`app.improve.evaluator.build_benchmark_score_fn`, whose whole
+    documented point was that it could never vary with the candidate).
 
-    Returns `app.improve.evaluator.build_benchmark_score_fn` itself: the
-    concrete hermetic default described in that function's docstring
-    (frozen §22 corruption suite + a fixed reference Model-B stand-in +
-    the holdout dataset's clinician agreement -- never a live network
-    call). Tests MUST override this via
-    `app.dependency_overrides[api_routes.get_improve_score_fn]` with a
-    fake that actually varies with its input.
+    Reuses this module's existing live-client/fixture helpers
+    (`_build_live_gemini_clients`, `DEMO_DATA_DIR`, `_bundle_ref_for_
+    patient_id`, `load_demo_snapshot`) rather than duplicating any of that
+    construction.
+
+    # VERIFY-LIVE: the returned factory's `run_pipeline` performs real
+    # `run_patient` calls against real Gemini clients; never called by the
+    # hermetic test suite. Tests MUST override this via
+    # `app.dependency_overrides[api_routes.get_improve_score_fn]` with a
+    # fake that actually varies with its input.
     """
-    return build_benchmark_score_fn
+
+    def factory(dataset_holdout: Dataset) -> ScoreFn:
+        settings = get_settings()
+        model_a, model_b = _build_live_gemini_clients(settings)
+        snapshot = load_demo_snapshot(DEMO_DATA_DIR / "evidence_snapshot.json")
+        transport = LocalFixtureTransport(DEMO_DATA_DIR)
+
+        def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
+            return run_patient(
+                patient_bundle_ref=_bundle_ref_for_patient_id(patient_id),
+                fhir_transport=transport,
+                snapshot=snapshot,
+                model_a=model_a,
+                model_b=model_b,
+                clock=lambda: datetime.now(UTC),
+                model_a_system_instruction=instruction,
+            )
+
+        return build_live_pipeline_score_fn(
+            benchmark=DEMO_PATIENT_IDS,
+            run_pipeline=run_pipeline,
+            dataset_holdout=dataset_holdout,
+        )
+
+    return factory

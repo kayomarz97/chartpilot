@@ -17,6 +17,7 @@ from typing import Any
 
 import pytest
 
+from app.agent.prompts import MODEL_A_SYSTEM_INSTRUCTION
 from app.fhir.transport import LocalFixtureTransport
 from app.gate.models import ClaimVerdict, PatientStatus
 from app.pipeline.demo_evidence import load_demo_snapshot
@@ -199,3 +200,34 @@ def test_failed_fhir_fetch_yields_failed_status_not_silent_empty_findings() -> N
     assert result.summary.status == PatientStatus.FAILED
     assert result.error is not None
     assert result.findings == ()
+
+
+def test_custom_model_a_system_instruction_overrides_the_pinned_default() -> None:
+    """Spec §53, Phase C seam: a caller-supplied `model_a_system_instruction`
+    is what actually reaches Model A's turn -- not the pinned
+    `MODEL_A_SYSTEM_INSTRUCTION` -- which is what lets the outer
+    self-improving loop's live evaluator run a CANDIDATE prompt against a
+    real patient without ever mutating the pinned module constant itself.
+    """
+    cassette = _load_cassette("a")
+    snapshot = load_demo_snapshot()
+    transport = LocalFixtureTransport(_DEMO_DIR)
+    model_a = _model_a_client(cassette, patient_id="patient-a")
+    custom_instruction = "CUSTOM TEST MODEL-A INSTRUCTION: reason carefully, cite verbatim spans."
+
+    result = run_patient(
+        patient_bundle_ref="patient_a.json",
+        fhir_transport=transport,
+        snapshot=snapshot,
+        model_a=model_a,
+        model_b=_model_b_client(cassette),
+        clock=lambda: _NOW,
+        repo=InMemoryRunRepository(),
+        run_id="demo-run-a-custom-instruction",
+        model_a_system_instruction=custom_instruction,
+    )
+
+    assert result.error is None
+    assert model_a.calls, "Model A must have been called at least once"
+    assert model_a.calls[0].startswith(custom_instruction)
+    assert MODEL_A_SYSTEM_INSTRUCTION not in model_a.calls[0]
