@@ -44,8 +44,13 @@ SECURE LIVE-DATA ARCHITECTURE (changed from the naive plan mid-integration): bac
   dedicated chartpilot-frontend-sa (run.invoker on backend) and calls the private backend; browser hits
   same-origin /api/runs. PROVEN LIVE: /api/runs returns backend data (200). Frontend redeployed (rev 2) with
   BACKEND_URL env + the SA (infra/70_deploy_frontend.sh updated). Backend redeployed rev 6 (IMAGE_TAG v3).
-✅ RESOLVED (2026-08-22, user): the ChartPilot Gemini MONTHLY SPEND CAP has been RAISED by the user — live
-  Gemini calls are unblocked again. (History: the key had hit its cap → 429 "project has exceeded its monthly
+⚠️ RE-EXCEEDED (2026-08-23): the ChartPilot Gemini MONTHLY SPEND CAP was raised by the user on 2026-08-22
+  (unblocking the live run), but was hit AGAIN mid-run — after Round 1 of the accelerated 4-round self-
+  improving run (de-risk + 8-patient round + two improve cycles + diagnostics), a definitive 429 "Your
+  project has exceeded its monthly spending cap" returns even after 6 retries/330s. **Rounds 2–4 are BLOCKED
+  until the user raises the cap again at https://ai.studio/spend (or it resets monthly).** Round 1 completed
+  and its result is saved (see below); the promoted r1 prompt is in the local file ledger.
+  Earlier (2026-08-22) note, for history: (History: the key had hit its cap → 429 "project has exceeded its monthly
   spending cap"; it was OUR chartpilot project's cap, not Iatronix, confirmed with the ambient GOOGLE_API_KEY
   unset. While capped, runs/demo returned 5 FAILED presentations and the UI showed its hardened demo-data
   fallback.) With the cap raised, live runs can proceed: re-trigger via scheduler body {"run_id":"demo"} and
