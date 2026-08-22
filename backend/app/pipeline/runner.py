@@ -35,6 +35,9 @@ from app.agent.claims import generate_claims
 from app.agent.models import Claim, ClaimType
 from app.agent.prompts import MODEL_A_SYSTEM_INSTRUCTION
 from app.agent.protocol import GeminiClient
+from app.agent.revise import build_revision_hint, revise_claim
+from app.citation.models import CitationVerdict
+from app.citation.verifier import is_span_repairable
 from app.evidence.guideline_pack import is_clinician_reviewed
 from app.evidence.models import EvidenceSnapshot, EvidenceTier
 from app.fhir.client import FhirClient
@@ -49,7 +52,7 @@ from app.normalize.models import NormalizedObservation
 from app.normalize.observation import latest_valid_observation, normalize_observation
 from app.normalize.units import NormalizedQuantity
 from app.pipeline.models import FindingResult, PatientRunResult, PatientRunSummary
-from app.review.deterministic import run_deterministic_layer
+from app.review.deterministic import DeterministicOutcome, run_deterministic_layer
 from app.review.models import (
     AssertedMedication,
     AssertedObservationValue,
@@ -109,6 +112,7 @@ def run_patient(
     repo: RunRepository | None = None,
     run_id: str = "demo-run",
     stage_timings: dict[str, float] | None = None,
+    max_revise_iterations: int = 2,
 ) -> PatientRunResult:
     """Run one patient through the full chained pipeline.
 
@@ -126,6 +130,15 @@ def run_patient(
     Defaults to `None`, in which case nothing is recorded and this call is
     byte-for-byte the same as before this parameter existed -- zero
     behavior change for every existing caller.
+
+    `max_revise_iterations` (spec §53, Phase A): the bounded budget for the
+    inner "gate-failure -> revise -> retry" loop -- see `_revise_claim_if_eligible`
+    below. `0` disables the loop entirely (legacy behavior, zero revise
+    calls). This ONLY ever gives Model A another chance to re-quote a
+    citation's `verbatim_supporting_span`; the deterministic gates, Model B,
+    and the final gate all still run, unchanged, on whatever claim ends up
+    final -- a claim that is still unrepaired after the budget keeps its
+    failing verdict, never silently passes.
     """
     repository = repo if repo is not None else InMemoryRunRepository()
     now = clock()
@@ -209,6 +222,7 @@ def run_patient(
     findings: list[FindingResult] = []
     claim_verdicts: list[ClaimVerdict] = []
     cited_evidence_ids: set[str] = set()
+    final_claims: list[Claim] = []
     _citation_check_elapsed = 0.0
     _independent_review_elapsed = 0.0
 
@@ -218,6 +232,18 @@ def run_patient(
             claim, patient_index=patient_index, rule_results=(k_result,)
         )
         outcome = run_deterministic_layer(cur, snapshot=snapshot)
+
+        claim, cur, outcome, revision_attempts = _revise_claim_if_eligible(
+            model_a,
+            claim=claim,
+            cur=cur,
+            outcome=outcome,
+            snapshot=snapshot,
+            patient_index=patient_index,
+            rule_results=(k_result,),
+            max_revise_iterations=max_revise_iterations,
+        )
+        final_claims.append(claim)
         _citation_check_elapsed += time.perf_counter() - _claim_start
 
         model_b_verdict: ModelBVerdict | None = None
@@ -273,6 +299,7 @@ def run_patient(
                 verdict=verdict,
                 citation_results=outcome.citation_results,
                 model_b_verdict=model_b_verdict,
+                revision_attempts=revision_attempts,
             )
         )
         cited_evidence_ids.update(ref.evidence_id for ref in claim.external_evidence)
@@ -286,8 +313,12 @@ def run_patient(
     terminal_status = derive_patient_status(
         claim_verdicts, stage=PatientStage.PERSISTED, commit_status=CommitStatus.COMMITTED
     )
+    # Serialize the FINAL (possibly revised) claims -- NOT `claim_set.claims`,
+    # the originals -- so a claim the revise loop swapped in a corrected span
+    # for is persisted with that corrected span, consistent with the verdict
+    # and `cited_evidence_ids` computed above from the same final claims.
     claims_payload = [
-        (claim.claim_id, json.loads(claim.model_dump_json())) for claim in claim_set.claims
+        (claim.claim_id, json.loads(claim.model_dump_json())) for claim in final_claims
     ]
     evidence_payload = [
         (evidence_id, json.loads(record.model_dump_json()))
@@ -414,6 +445,107 @@ def _build_claim_under_review(
         patient_index=patient_index,
         rule_results=rule_results,
     )
+
+
+def _is_revise_eligible(outcome: DeterministicOutcome) -> bool:
+    """Return whether `outcome` is eligible to enter (or continue) the
+    bounded revise loop (spec §53, Phase A).
+
+    Eligible iff there are NO integrity failures AND every citation that
+    didn't fully verify is span-repairable (`app.citation.verifier.
+    is_span_repairable`) -- i.e. there is at least one span-repairable
+    citation and NO non-repairable reject (an unresolvable evidence_id, a
+    corrupted artifact, or a tier violation). A claim with zero non-verified
+    citations has nothing to repair and is also not eligible (used both to
+    gate loop ENTRY and to detect when a revision has fully succeeded, so
+    the loop can stop early rather than spend the rest of its budget).
+    """
+    if outcome.integrity_failures:
+        return False
+    non_verified = [
+        result
+        for result in outcome.citation_results
+        if result.verdict != CitationVerdict.VERIFIED_SPAN
+    ]
+    if not non_verified:
+        return False
+    return all(is_span_repairable(result) for result in non_verified)
+
+
+def _revision_is_safe(original: Claim, revised: Claim) -> bool:
+    """The safety guard the revise loop applies before ever adopting a
+    revised claim (spec §53): the loop may ONLY change citation spans (or
+    drop a citation), never clinical meaning or the evidence set's
+    membership beyond dropping.
+
+    Requires `claim_id`/`claim_type`/`statement`/`patient_evidence` to be
+    byte-identical to the original, and the revised `external_evidence`'s
+    evidence_ids to be a SUBSET of the original's (spans may change,
+    sources may only be dropped, never added or switched to a different
+    evidence_id). Any violation fails closed: the caller keeps the original
+    claim and stops the loop.
+    """
+    if revised.claim_id != original.claim_id:
+        return False
+    if revised.claim_type != original.claim_type:
+        return False
+    if revised.statement != original.statement:
+        return False
+    if revised.patient_evidence != original.patient_evidence:
+        return False
+    original_ids = {ref.evidence_id for ref in original.external_evidence}
+    revised_ids = {ref.evidence_id for ref in revised.external_evidence}
+    return revised_ids.issubset(original_ids)
+
+
+def _revise_claim_if_eligible(
+    model_a: GeminiClient,
+    *,
+    claim: Claim,
+    cur: ClaimUnderReview,
+    outcome: DeterministicOutcome,
+    snapshot: EvidenceSnapshot,
+    patient_index: PatientFactIndex,
+    rule_results: tuple[RuleResult, ...],
+    max_revise_iterations: int,
+) -> tuple[Claim, ClaimUnderReview, DeterministicOutcome, int]:
+    """Run the bounded "gate-failure -> revise -> retry" loop for one claim
+    (spec §53, Phase A) and return the FINAL `(claim, cur, outcome,
+    revision_attempts)` -- the original, untouched inputs if the loop never
+    entered, was never eligible, or every attempt failed closed.
+
+    Never raises: a `revise_claim` exception (network/model outage,
+    malformed structured output, ...) is caught and the loop breaks,
+    keeping the last good claim/outcome -- fail closed, exactly like every
+    other model call in this pipeline (see module docstring). The deterministic
+    layer is re-run after every accepted revision, so `outcome` returned here
+    is always consistent with `claim`/`cur`.
+    """
+    revision_attempts = 0
+    if max_revise_iterations <= 0 or not _is_revise_eligible(outcome):
+        return claim, cur, outcome, revision_attempts
+
+    for _ in range(max_revise_iterations):
+        hint = build_revision_hint(claim, outcome.citation_results, snapshot)
+        if hint is None:
+            break
+        try:
+            revised = revise_claim(model_a, claim=claim, revision_hint=hint)
+        except Exception:  # noqa: BLE001 -- fail closed, keep the last good claim/outcome
+            break
+        if not _revision_is_safe(claim, revised):
+            break
+
+        claim = revised
+        cur = _build_claim_under_review(
+            claim, patient_index=patient_index, rule_results=rule_results
+        )
+        outcome = run_deterministic_layer(cur, snapshot=snapshot)
+        revision_attempts += 1
+        if not _is_revise_eligible(outcome):
+            break
+
+    return claim, cur, outcome, revision_attempts
 
 
 def _value_str(value: NormalizedQuantity | str | None) -> str:

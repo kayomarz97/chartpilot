@@ -223,6 +223,35 @@ def verify_citation(
     )
 
 
+def is_span_repairable(result: CitationResult) -> bool:
+    """Return whether `result` is eligible for the bounded revise loop
+    (spec §53, Phase A): SOURCE_RETRIEVAL, CONTENT_HASH, and METADATA all
+    passed, but SPAN_VERIFICATION failed -- either a hard REJECT (zero/empty
+    occurrence) or a FLAG_FOR_REVIEW (ambiguous, >1 occurrence).
+
+    Any citation whose SOURCE_RETRIEVAL/CONTENT_HASH/METADATA gate failed
+    (or was never reached, e.g. an early REJECT that short-circuited before
+    METADATA even ran) is NOT repairable -- re-quoting a span can never fix
+    an unresolvable evidence_id, a corrupted artifact, or a tier violation,
+    so those must keep today's fail-closed behavior untouched.
+    """
+    gates_by_name = {gate.gate: gate for gate in result.gates}
+
+    def _passed(name: GateName) -> bool:
+        gate = gates_by_name.get(name)
+        return gate is not None and gate.passed
+
+    span_gate = gates_by_name.get(GateName.SPAN_VERIFICATION)
+    span_failed = span_gate is not None and not span_gate.passed
+
+    return (
+        _passed(GateName.SOURCE_RETRIEVAL)
+        and _passed(GateName.CONTENT_HASH)
+        and _passed(GateName.METADATA)
+        and span_failed
+    )
+
+
 def offsets_still_valid(result: CitationResult, current_record: EvidenceRecord) -> bool:
     """Return whether `result`'s computed offsets are still valid against
     `current_record` (spec §19).

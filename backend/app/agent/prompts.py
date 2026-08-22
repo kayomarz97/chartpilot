@@ -56,3 +56,20 @@ Do not include any prose outside the schema. Every claim must include a rational
 explaining, in plain terms, why the claim follows from the cited patient facts and/or \
 external evidence.
 """
+
+#: Fixed instruction for the bounded "gate-failure -> revise -> retry" loop
+#: (spec §53, Phase A of the self-improving loop). Used ONLY to re-elicit a
+#: corrected `verbatim_supporting_span` on citations the deterministic
+#: SPAN_VERIFICATION gate rejected/flagged -- never to change clinical
+#: meaning. Like `MODEL_A_SYSTEM_INSTRUCTION`, this is a module constant for
+#: byte-identical determinism, and (per the same Gemini 3.x guidance) carries
+#: no sampling parameters.
+MODEL_A_REVISE_INSTRUCTION: str = """\
+You previously produced a clinical claim; some verbatim supporting spans could NOT be \
+verified against the source text. Below is each failing citation with the FULL source \
+content. Re-emit the SAME claim (same claim_id, claim_type, statement, patient_evidence) \
+changing ONLY the verbatim_supporting_span of each failing external_evidence entry to an \
+EXACT substring of that source. Do not change the clinical meaning. Do not invent or \
+switch evidence sources. If you cannot find a supporting verbatim span for a citation, \
+drop that citation rather than fabricate one. Never emit character offsets.
+"""

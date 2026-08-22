@@ -27,7 +27,19 @@ __all__ = ["FindingResult", "PatientRunSummary", "PatientRunResult"]
 
 
 class FindingResult(BaseModel):
-    """One claim plus its full downstream disposition."""
+    """One claim plus its full downstream disposition.
+
+    `claim` and `citation_results` reflect the FINAL claim after the bounded
+    "gate-failure -> revise -> retry" loop (spec §53, Phase A;
+    `app.pipeline.runner.run_patient`'s `max_revise_iterations`), not
+    necessarily what Model A emitted on its first pass. `revision_attempts`
+    is a defaulted trace field (0 for every finding that never entered the
+    loop, including every construction site that predates it) counting how
+    many times that loop successfully swapped in a re-quoted claim -- it is
+    informational only and never affects `verdict`, which is decided solely
+    by `app.gate.claim_gate.finalize_claim_verdict` against whatever claim
+    ended up final.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -35,6 +47,7 @@ class FindingResult(BaseModel):
     verdict: ClaimVerdict
     citation_results: tuple[CitationResult, ...]
     model_b_verdict: ModelBVerdict | None
+    revision_attempts: int = 0
 
 
 class PatientRunSummary(BaseModel):
