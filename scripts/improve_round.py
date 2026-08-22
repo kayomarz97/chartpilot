@@ -72,8 +72,13 @@ def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _claim_patient_map(presentations: list[dict[str, Any]]) -> dict[str, str]:
-    mapping: dict[str, str] = {}
+def _valid_pairs(presentations: list[dict[str, Any]]) -> set[tuple[str, str]]:
+    """Every `(patient_id, claim_id)` pair present in this round -- the
+    patient-scoped key `collect_dataset` joins on. Built as a set (not a
+    claim_id->patient_id map) because model-assigned `claim_id`s COLLIDE
+    across patients (e.g. several patients each emit `claim-001`), so a
+    claim_id alone is NOT a unique key within a round."""
+    pairs: set[tuple[str, str]] = set()
     for presentation in presentations:
         patient_id = presentation.get("patientId")
         if not patient_id:
@@ -81,24 +86,39 @@ def _claim_patient_map(presentations: list[dict[str, Any]]) -> dict[str, str]:
         for finding in presentation.get("findings") or []:
             claim_id = finding.get("claimId")
             if claim_id:
-                mapping[str(claim_id)] = str(patient_id)
-    return mapping
+                pairs.add((str(patient_id), str(claim_id)))
+    return pairs
 
 
 def _build_clinician_actions(
-    labels: dict[str, Any], claim_patient: dict[str, str], *, recorded_at_iso: str
+    labels: Any, presentations: list[dict[str, Any]], *, recorded_at_iso: str
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Convert `--labels` into the `clinician_actions` dict shape
     `app.improve.collector.collect_dataset` reads. Returns `(actions,
-    skipped_claim_ids)` -- a label whose `claim_id` doesn't match any claim
-    in this round's presentations is skipped (reported, never silently
-    dropped without a trace)."""
+    skipped)` -- a label whose `(patient_id, claim_id)` doesn't match any
+    finding in this round is skipped (reported, never silently dropped).
+
+    `labels` is EITHER (preferred, patient-scoped, collision-safe) a LIST of
+    `{"patient_id", "claim_id", "action", "note"}`, OR (legacy, single-
+    patient only) a dict `{claim_id: {"action", "note"}}` resolved against
+    the round's sole patient. Model-assigned claim_ids collide across
+    patients, so multi-patient rounds MUST use the list form."""
+    pairs = _valid_pairs(presentations)
     actions: list[dict[str, Any]] = []
     skipped: list[str] = []
-    for claim_id, label in labels.items():
-        patient_id = claim_patient.get(claim_id)
-        if patient_id is None:
-            skipped.append(claim_id)
+
+    if isinstance(labels, list):
+        entries = [
+            (str(item.get("patient_id", "")), str(item.get("claim_id", "")), item)
+            for item in labels
+        ]
+    else:  # legacy dict form: only unambiguous when the round has one patient
+        sole_patient = presentations[0].get("patientId", "") if len(presentations) == 1 else ""
+        entries = [(str(sole_patient), str(cid), label) for cid, label in labels.items()]
+
+    for patient_id, claim_id, label in entries:
+        if (patient_id, claim_id) not in pairs:
+            skipped.append(f"{patient_id}:{claim_id}")
             continue
         actions.append(
             {
@@ -152,12 +172,11 @@ def main() -> None:
 
     round_results = _load_json(args.round_results)
     presentations: list[dict[str, Any]] = round_results["patients"]
-    labels: dict[str, Any] = _load_json(args.labels)
+    labels: Any = _load_json(args.labels)
 
     now = datetime.now(UTC)
-    claim_patient = _claim_patient_map(presentations)
     clinician_actions, skipped = _build_clinician_actions(
-        labels, claim_patient, recorded_at_iso=now.isoformat()
+        labels, presentations, recorded_at_iso=now.isoformat()
     )
     if skipped:
         print(f"round {args.round}: WARNING -- {len(skipped)} label(s) matched no claim: {skipped}")
