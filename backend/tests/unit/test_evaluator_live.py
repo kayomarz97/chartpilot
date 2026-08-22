@@ -1,6 +1,13 @@
 """Tests for `app.improve.evaluator_live.build_live_pipeline_score_fn` -- the
 LIVE `ScoreFn` factory, driven entirely by a fake `run_pipeline` callable so
 this module stays hermetic (no network, no real Gemini/`run_patient` call).
+
+The PRIMARY objective is the review-survival rate (cited findings whose
+citations all verify AND whose Model-B verdict is `SUPPORTED`/not
+`should_reject`, divided by all cited findings); the citation verified-span
+rate is a GUARD axis. See `app.improve.evaluator_live`'s module docstring
+for why (baseline citation-span rate is saturated at 100%, review-survival
+is the axis with real headroom).
 """
 
 from __future__ import annotations
@@ -17,6 +24,7 @@ from app.improve.evaluator_live import build_live_pipeline_score_fn
 from app.improve.models import Candidate, Dataset, ImproveTarget, Metrics, TrainingCase
 from app.improve.promote import FilePromotionLedger
 from app.pipeline.models import FindingResult, PatientRunResult, PatientRunSummary
+from app.review.models import ModelBVerdict, ReviewFinding
 
 _NOW = datetime(2026, 8, 20, 12, 0, 0, tzinfo=UTC)
 
@@ -46,18 +54,34 @@ def _claim(claim_id: str) -> Claim:
     )
 
 
-def _finding(claim_id: str, verdicts: list[CitationVerdict]) -> FindingResult:
+def _model_b(finding: ReviewFinding, *, should_reject: bool) -> ModelBVerdict:
+    return ModelBVerdict(finding=finding, should_reject=should_reject, rationale="test verdict")
+
+
+#: A "clean" Model-B verdict: SUPPORTED and not flagged for rejection --
+#: the only verdict `_survives_review` (app.improve.evaluator_live) accepts.
+_SUPPORTED = _model_b(ReviewFinding.SUPPORTED, should_reject=False)
+#: An "unclean" Model-B verdict: a real finding a clinician would want
+#: flagged -- fails `_survives_review` regardless of its citations.
+_OVERSTATED_REJECTED = _model_b(ReviewFinding.OVERSTATED, should_reject=True)
+
+
+def _finding(
+    claim_id: str,
+    verdicts: list[CitationVerdict],
+    model_b_verdict: ModelBVerdict | None = None,
+) -> FindingResult:
     return FindingResult(
         claim=_claim(claim_id),
         verdict=ClaimVerdict.VERIFIED,
         citation_results=tuple(
             _citation(v, evidence_id=f"{claim_id}-ev-{i}") for i, v in enumerate(verdicts)
         ),
-        model_b_verdict=None,
+        model_b_verdict=model_b_verdict,
     )
 
 
-def _fabricate_result(patient_id: str, verdicts: list[CitationVerdict]) -> PatientRunResult:
+def _fabricate_result(patient_id: str, findings: list[FindingResult]) -> PatientRunResult:
     return PatientRunResult(
         patient_id=patient_id,
         summary=PatientRunSummary(
@@ -65,7 +89,7 @@ def _fabricate_result(patient_id: str, verdicts: list[CitationVerdict]) -> Patie
             stage=PatientStage.PERSISTED,
             commit_status=CommitStatus.COMMITTED,
         ),
-        findings=(_finding(f"{patient_id}-claim", verdicts),),
+        findings=tuple(findings),
         rule_results=(),
         validity_results=(),
         timeline_events=(),
@@ -77,14 +101,16 @@ def _fabricate_result(patient_id: str, verdicts: list[CitationVerdict]) -> Patie
 # --------------------------------------------------------------------------
 
 
-def test_higher_verified_span_rate_scores_strictly_higher() -> None:
+def test_higher_review_survival_rate_scores_strictly_higher_on_the_primary_axis() -> None:
+    """The PRIMARY axis is review-survival, not the citation-span rate: two
+    patients whose only difference is Model B's verdict (citations are
+    VERIFIED_SPAN in both cases) must move `set_d_blocked`/`false_reject`
+    but leave the guard axis (`set_m_caught`) untouched."""
+
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
-        verdicts = (
-            [CitationVerdict.VERIFIED_SPAN, CitationVerdict.VERIFIED_SPAN]
-            if instruction == "better prompt"
-            else [CitationVerdict.VERIFIED_SPAN, CitationVerdict.REJECT]
-        )
-        return _fabricate_result(patient_id, verdicts)
+        model_b = _SUPPORTED if instruction == "better prompt" else _OVERSTATED_REJECTED
+        finding = _finding("c1", [CitationVerdict.VERIFIED_SPAN], model_b)
+        return _fabricate_result(patient_id, [finding])
 
     score_fn = build_live_pipeline_score_fn(
         benchmark=("patient-a", "patient-b"), run_pipeline=run_pipeline
@@ -97,6 +123,9 @@ def test_higher_verified_span_rate_scores_strictly_higher() -> None:
     assert isinstance(after, Metrics)
     assert after.set_d_blocked > before.set_d_blocked
     assert after.false_reject < before.false_reject
+    # citation-span rate (the guard) is unaffected: every citation in both
+    # runs is VERIFIED_SPAN.
+    assert after.set_m_caught == before.set_m_caught == 10_000
 
 
 def test_empty_candidate_prompt_resolves_to_none_instruction() -> None:
@@ -107,7 +136,9 @@ def test_empty_candidate_prompt_resolves_to_none_instruction() -> None:
 
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
         seen.append(instruction)
-        return _fabricate_result(patient_id, [CitationVerdict.VERIFIED_SPAN])
+        return _fabricate_result(
+            patient_id, [_finding("c1", [CitationVerdict.VERIFIED_SPAN], _SUPPORTED)]
+        )
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
     score_fn("")
@@ -120,7 +151,9 @@ def test_non_empty_candidate_prompt_is_passed_through_verbatim() -> None:
 
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
         seen.append(instruction)
-        return _fabricate_result(patient_id, [CitationVerdict.VERIFIED_SPAN])
+        return _fabricate_result(
+            patient_id, [_finding("c1", [CitationVerdict.VERIFIED_SPAN], _SUPPORTED)]
+        )
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
     score_fn("a candidate prompt")
@@ -128,20 +161,48 @@ def test_non_empty_candidate_prompt_is_passed_through_verbatim() -> None:
     assert seen == ["a candidate prompt"]
 
 
-def test_zero_total_citations_scores_a_neutral_full_rate() -> None:
+def test_zero_total_citations_scores_a_neutral_full_rate_on_both_axes() -> None:
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
-        return _fabricate_result(patient_id, [])
+        return _fabricate_result(patient_id, [_finding("c1", [], None)])
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
     metrics = score_fn("anything")
 
     assert metrics.set_d_blocked == 10_000
     assert metrics.false_reject == 0
+    assert metrics.set_m_caught == 10_000
+
+
+def test_zero_cited_findings_patient_does_not_crash_and_contributes_neutrally() -> None:
+    """A benchmark patient with no cited findings at all (e.g. every claim
+    was purely a patient-fact restatement with no external evidence) must
+    neither raise nor drag the pooled rate down -- it contributes `(0, 0)`
+    to both the numerator and denominator, i.e. it is simply excluded from
+    the pool, not treated as a failing `0.0` rate."""
+
+    def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
+        if patient_id == "patient-empty":
+            return _fabricate_result(patient_id, [_finding("c-empty", [], None)])
+        return _fabricate_result(
+            patient_id, [_finding("c1", [CitationVerdict.VERIFIED_SPAN], _SUPPORTED)]
+        )
+
+    score_fn = build_live_pipeline_score_fn(
+        benchmark=("patient-empty", "patient-b"), run_pipeline=run_pipeline
+    )
+    metrics = score_fn("x")  # must not raise, must not divide by zero
+
+    # Only patient-b contributes to the pool: 1/1 survives, 1/1 verifies.
+    assert metrics.set_d_blocked == 10_000
+    assert metrics.false_reject == 0
+    assert metrics.set_m_caught == 10_000
 
 
 def test_clinician_agreement_defaults_to_neutral_constant_without_holdout() -> None:
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
-        return _fabricate_result(patient_id, [CitationVerdict.VERIFIED_SPAN])
+        return _fabricate_result(
+            patient_id, [_finding("c1", [CitationVerdict.VERIFIED_SPAN], _SUPPORTED)]
+        )
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
     metrics = score_fn("x")
@@ -166,7 +227,9 @@ def test_clinician_agreement_uses_the_holdout_dataset_when_given() -> None:
     )
 
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
-        return _fabricate_result(patient_id, [CitationVerdict.VERIFIED_SPAN])
+        return _fabricate_result(
+            patient_id, [_finding("c1", [CitationVerdict.VERIFIED_SPAN], _SUPPORTED)]
+        )
 
     score_fn = build_live_pipeline_score_fn(
         benchmark=("patient-a",), run_pipeline=run_pipeline, dataset_holdout=holdout
@@ -183,7 +246,9 @@ def test_never_touches_the_network() -> None:
     `pytest-socket`'s `--disable-socket`."""
 
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
-        return _fabricate_result(patient_id, [CitationVerdict.VERIFIED_SPAN])
+        return _fabricate_result(
+            patient_id, [_finding("c1", [CitationVerdict.VERIFIED_SPAN], _SUPPORTED)]
+        )
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
     score_fn("anything")  # must not raise
@@ -196,13 +261,14 @@ def test_never_touches_the_network() -> None:
 
 
 def test_evaluate_candidate_accepts_an_improving_candidate_through_the_live_score_fn() -> None:
+    """A candidate that yields MORE Model-B-SUPPORTED cited findings (with
+    the citation-span guard unchanged) scores strictly higher on the
+    primary axis and is genuinely ACCEPTED by `evaluate_candidate`."""
+
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
-        verdicts = (
-            [CitationVerdict.VERIFIED_SPAN, CitationVerdict.VERIFIED_SPAN]
-            if instruction == "better prompt"
-            else [CitationVerdict.VERIFIED_SPAN, CitationVerdict.REJECT]
-        )
-        return _fabricate_result(patient_id, verdicts)
+        model_b = _SUPPORTED if instruction == "better prompt" else _OVERSTATED_REJECTED
+        finding = _finding("c1", [CitationVerdict.VERIFIED_SPAN], model_b)
+        return _fabricate_result(patient_id, [finding])
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
     candidate = Candidate(
@@ -216,14 +282,20 @@ def test_evaluate_candidate_accepts_an_improving_candidate_through_the_live_scor
     assert result.regressed is False
 
 
-def test_evaluate_candidate_rejects_a_regressing_candidate_through_the_live_score_fn() -> None:
+def test_evaluate_candidate_rejects_a_candidate_that_drops_the_citation_span_guard() -> None:
+    """A candidate that only changes the citation-span rate (Model B is
+    never run either side) moves the GUARD axis (`set_m_caught`) but ties
+    on the primary axis -- `evaluate_candidate` must still reject it,
+    proving the guard alone can block acceptance."""
+
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
         verdicts = (
             [CitationVerdict.VERIFIED_SPAN, CitationVerdict.REJECT]
             if instruction == "worse prompt"
             else [CitationVerdict.VERIFIED_SPAN, CitationVerdict.VERIFIED_SPAN]
         )
-        return _fabricate_result(patient_id, verdicts)
+        finding = _finding("c1", verdicts, None)
+        return _fabricate_result(patient_id, [finding])
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
     candidate = Candidate(
@@ -233,6 +305,45 @@ def test_evaluate_candidate_rejects_a_regressing_candidate_through_the_live_scor
     # active_value non-empty ("already active") -- passed through verbatim,
     # not mapped to `None`, exercising the non-sentinel path on the BEFORE side.
     result = evaluate_candidate(candidate, active_value="already active", score_fn=score_fn)
+
+    assert result.accept is False
+    assert result.regressed is True
+
+
+def test_evaluate_candidate_rejects_when_review_survival_rises_but_citation_span_falls() -> None:
+    """The core guard scenario from the spec: a candidate that RAISES the
+    review-survival rate (more findings pass Model B) but LOWERS the
+    citation-span rate (one of its citations stops verifying) must still be
+    REJECTED -- an improvement on the primary axis never buys tolerance for
+    a regression on the guard axis."""
+
+    def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
+        if instruction == "candidate":
+            findings = [
+                _finding("c1", [CitationVerdict.VERIFIED_SPAN], _SUPPORTED),  # survives
+                _finding(
+                    "c2", [CitationVerdict.REJECT], _SUPPORTED
+                ),  # citation fails -> no survive
+            ]
+        else:
+            findings = [
+                _finding("c1", [CitationVerdict.VERIFIED_SPAN], _OVERSTATED_REJECTED),
+                _finding("c2", [CitationVerdict.VERIFIED_SPAN], _OVERSTATED_REJECTED),
+            ]
+        return _fabricate_result(patient_id, findings)
+
+    score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
+
+    before = score_fn("baseline")
+    after = score_fn("candidate")
+
+    # Sanity: primary axis genuinely rose (0/2 -> 1/2 survive)...
+    assert after.set_d_blocked > before.set_d_blocked
+    # ...while the guard genuinely fell (2/2 -> 1/2 verified-span).
+    assert after.set_m_caught < before.set_m_caught
+
+    candidate = Candidate(target=ImproveTarget.MODEL_A_PROMPT, new_value="candidate", rationale="r")
+    result = evaluate_candidate(candidate, active_value="baseline", score_fn=score_fn)
 
     assert result.accept is False
     assert result.regressed is True
@@ -268,12 +379,9 @@ def test_cycle_with_a_live_style_score_fn_promotes_an_improving_candidate(tmp_pa
         return Candidate(target=target, new_value="better prompt", rationale="proposed")
 
     def run_pipeline(patient_id: str, instruction: str | None) -> PatientRunResult:
-        verdicts = (
-            [CitationVerdict.VERIFIED_SPAN, CitationVerdict.VERIFIED_SPAN]
-            if instruction == "better prompt"
-            else [CitationVerdict.VERIFIED_SPAN, CitationVerdict.REJECT]
-        )
-        return _fabricate_result(patient_id, verdicts)
+        model_b = _SUPPORTED if instruction == "better prompt" else _OVERSTATED_REJECTED
+        finding = _finding("c1", [CitationVerdict.VERIFIED_SPAN], model_b)
+        return _fabricate_result(patient_id, [finding])
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
 
@@ -307,7 +415,8 @@ def test_cycle_with_a_live_style_score_fn_rejects_a_regressing_candidate(tmp_pat
             if instruction == "worse prompt"
             else [CitationVerdict.VERIFIED_SPAN, CitationVerdict.VERIFIED_SPAN]
         )
-        return _fabricate_result(patient_id, verdicts)
+        finding = _finding("c1", verdicts, None)
+        return _fabricate_result(patient_id, [finding])
 
     score_fn = build_live_pipeline_score_fn(benchmark=("patient-a",), run_pipeline=run_pipeline)
 
