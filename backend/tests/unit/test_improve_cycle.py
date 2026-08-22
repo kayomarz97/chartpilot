@@ -8,7 +8,7 @@ from pathlib import Path
 
 from app.improve.cycle import run_improvement_cycle
 from app.improve.models import Candidate, Dataset, ImproveTarget, Metrics
-from app.improve.promote import PromotionLedger
+from app.improve.promote import FilePromotionLedger
 
 _NOW = datetime(2026, 8, 20, 12, 0, 0, tzinfo=UTC)
 
@@ -39,7 +39,7 @@ def _tying_score_fn(value: str) -> Metrics:
 
 
 def test_accepted_candidate_promotes_to_the_ledger(tmp_path: Path) -> None:
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
 
     def generate(dataset: Dataset, target: ImproveTarget) -> Candidate:
         return Candidate(target=target, new_value="better prompt", rationale="proposed")
@@ -62,7 +62,7 @@ def test_accepted_candidate_promotes_to_the_ledger(tmp_path: Path) -> None:
 
 
 def test_rejected_candidate_leaves_active_unchanged(tmp_path: Path) -> None:
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
     ledger.promote(
         ImproveTarget.MODEL_A_PROMPT, "already active", version="v0", rationale="seed", now=_NOW
     )
@@ -87,7 +87,7 @@ def test_rejected_candidate_leaves_active_unchanged(tmp_path: Path) -> None:
 
 
 def test_exception_in_propose_yields_a_rejected_report_and_never_raises(tmp_path: Path) -> None:
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
 
     def broken_generate(dataset: Dataset, target: ImproveTarget) -> Candidate:
         raise RuntimeError("generator blew up")
@@ -111,7 +111,7 @@ def test_exception_in_propose_yields_a_rejected_report_and_never_raises(tmp_path
 
 
 def test_exception_in_score_fn_yields_a_rejected_report_and_never_raises(tmp_path: Path) -> None:
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
 
     def generate(dataset: Dataset, target: ImproveTarget) -> Candidate:
         return Candidate(target=target, new_value="candidate", rationale="proposed")
@@ -139,7 +139,7 @@ def test_exception_in_score_fn_yields_a_rejected_report_and_never_raises(tmp_pat
 def test_exception_during_promotion_yields_a_rejected_report_and_never_raises(
     tmp_path: Path,
 ) -> None:
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
 
     def generate(dataset: Dataset, target: ImproveTarget) -> Candidate:
         return Candidate(target=target, new_value="better prompt", rationale="proposed")

@@ -15,8 +15,9 @@ from typing import Any
 
 from app.improve.collector import collect_dataset
 from app.improve.evaluator import ScoreFn, evaluate_candidate
+from app.improve.ledger import PromotionLedger
 from app.improve.models import ImprovementReport, ImproveTarget
-from app.improve.promote import PromotionLedger, canary_compare
+from app.improve.promote import canary_compare
 from app.improve.proposer import Generator, assert_target_allowed, propose_candidate
 
 __all__ = ["run_improvement_cycle"]

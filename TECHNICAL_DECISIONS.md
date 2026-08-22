@@ -193,6 +193,10 @@ The three-tier boundary (the reason this is safe to ship in a clinical context):
 Two invariants make it honest: **(1) determinism is preserved** — prompts stay pinned Python constants; the
 loop writes versioned artifacts to a ledger and a resolver returns the active version or the pinned default
 (empty ledger ⇒ byte-identical to today; live consumption is deliberately opt-in, `run_patient` unchanged).
+The ledger itself is Firestore-backed and durable (`app/improve/firestore_ledger.py::FirestorePromotionLedger`,
+the same live Admin-SDK pattern as `app/storage/firestore_repo.py`) — a promotion survives Cloud Run instance
+restarts, redeploys, and scale-to-zero, and is visible to every concurrently-running instance, not just a
+local-disk file on the one instance that accepted it.
 **(2) No training on the held-out eval** — the §22 corruption suite is the frozen benchmark (never mutated by
 the loop) and clinician cases split deterministically into train (propose) vs holdout (evaluate). This
 directly avoids the trap the README already calls out (Model B measured at 75% false-reject: a loop that

@@ -1,6 +1,9 @@
-"""Append-only, file-backed ledger of promoted AUTO-tier artifact versions
-(Phase C) -- the ONLY place a candidate's text ever becomes the "active"
-value `app.improve.registry.resolve_artifact` can return.
+"""Append-only, file-backed `app.improve.ledger.PromotionLedger` implementation
+(Phase C) -- one of three backends satisfying that Protocol (the others:
+`app.improve.inmemory_ledger.InMemoryPromotionLedger`,
+`app.improve.firestore_ledger.FirestorePromotionLedger`, the durable
+production default). Kept as the hermetic-test default here since it needs
+no setup beyond a pytest `tmp_path`.
 
 Design: one `<target>.ledger.jsonl` file per target holds every
 `PromotionRecord` ever appended (never rewritten, never deleted -- true
@@ -14,35 +17,29 @@ line, which is what makes "append-only" true of both operations.
 
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from pathlib import Path
 
 from app.improve.evaluator import ScoreFn, compare_metrics
+from app.improve.ledger import safe_ledger_component
 from app.improve.models import ImproveTarget, PromotionRecord
 from app.improve.proposer import assert_target_allowed
 
-__all__ = ["PromotionLedger", "canary_compare"]
-
-_SAFE_COMPONENT_RE = re.compile(r"[^A-Za-z0-9._-]")
+__all__ = ["FilePromotionLedger", "canary_compare"]
 
 
-def _safe_component(raw: str) -> str:
-    """Sanitize a caller-supplied path component (a `version` string
-    ultimately originates from the `POST /improve-run` request body) for
-    safe use in a filename -- defense in depth against path traversal."""
-    cleaned = _SAFE_COMPONENT_RE.sub("_", raw)
-    return cleaned or "_"
-
-
-class PromotionLedger:
+class FilePromotionLedger:
     """Append-only promotion history + active-artifact store for every
-    `ImproveTarget`, rooted at `base_dir` (created if missing).
+    `ImproveTarget`, rooted at `base_dir` (created if missing). Satisfies
+    `app.improve.ledger.PromotionLedger` structurally.
 
-    Tests MUST construct this with a pytest `tmp_path` -- never the real
-    default directory (`app/improve/data/ledger`, see
-    `app.api.routes.get_improve_ledger`) -- so the hermetic suite writes
-    nothing into the repo.
+    Tests MUST construct this with a pytest `tmp_path` -- never a real
+    production directory -- so the hermetic suite writes nothing into the
+    repo. Not the production default (see `app.improve.firestore_ledger.
+    FirestorePromotionLedger` for that, wired via `app.api.routes.
+    get_improve_ledger`): this class's writes live on local disk only, so a
+    Cloud Run instance restart/redeploy/scale-to-zero loses them -- fine for
+    a hermetic test's `tmp_path` lifetime, wrong for production durability.
     """
 
     def __init__(self, base_dir: Path) -> None:
@@ -50,11 +47,11 @@ class PromotionLedger:
         self._base_dir.mkdir(parents=True, exist_ok=True)
 
     def _ledger_path(self, target: ImproveTarget) -> Path:
-        return self._base_dir / f"{_safe_component(target.value)}.ledger.jsonl"
+        return self._base_dir / f"{safe_ledger_component(target.value)}.ledger.jsonl"
 
     def _artifact_path(self, target: ImproveTarget, version: str) -> Path:
         return self._base_dir / (
-            f"{_safe_component(target.value)}__{_safe_component(version)}.artifact.txt"
+            f"{safe_ledger_component(target.value)}__{safe_ledger_component(version)}.artifact.txt"
         )
 
     def _read_records(self, target: ImproveTarget) -> list[PromotionRecord]:

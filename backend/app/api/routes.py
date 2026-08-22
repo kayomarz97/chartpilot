@@ -63,7 +63,6 @@ from pydantic import BaseModel, ConfigDict
 
 from app.api.auth import require_oidc
 from app.api.composition import (
-    IMPROVE_LEDGER_DIR,
     DemoAppointmentSource,
     build_live_queue,
     build_run_repository,
@@ -76,8 +75,9 @@ from app.feedback.models import ClinicianAction, ClinicianActionKind
 from app.improve.collector import collect_dataset
 from app.improve.cycle import run_improvement_cycle
 from app.improve.evaluator import ScoreFn
+from app.improve.firestore_ledger import FirestorePromotionLedger
+from app.improve.ledger import PromotionLedger
 from app.improve.models import Dataset, ImprovementReport, ImproveTarget
-from app.improve.promote import PromotionLedger
 from app.improve.proposer import Generator
 from app.storage.models import clinician_actions_collection_path
 from app.storage.repository import RunRepository
@@ -300,16 +300,23 @@ def record_clinician_action(
 
 
 def get_improve_ledger() -> PromotionLedger:
-    """Real (production) `PromotionLedger` provider: file-backed under
-    `app/improve/data/ledger` (`app.api.composition.IMPROVE_LEDGER_DIR` --
-    the SAME constant `app.api.composition.live_process_patient_handler`
-    reads from, so a promotion made here is visible to that read path on
-    the same instance; see that module's ephemeral-disk caveat). Tests
-    MUST override this via `app.dependency_overrides[get_improve_ledger]`
-    with a `PromotionLedger(tmp_path)` so the hermetic suite never writes
-    into the repo.
+    """Real (production) `PromotionLedger` provider: Firestore-backed
+    (`app.improve.firestore_ledger.FirestorePromotionLedger`) -- the SAME
+    durable backend `app.api.composition.live_process_patient_handler`'s
+    `_resolve_live_model_a_system_instruction` reads from, so a promotion
+    made here is visible to that read path on EVERY Cloud Run instance, not
+    just the one that served this request, and survives instance restarts/
+    redeploys/scale-to-zero (see `app.improve.firestore_ledger`'s module
+    docstring for the document layout). Tests MUST override this via
+    `app.dependency_overrides[get_improve_ledger]` with an
+    `app.improve.inmemory_ledger.InMemoryPromotionLedger` or an
+    `app.improve.promote.FilePromotionLedger(tmp_path)` so the hermetic
+    suite never touches a real Firestore project.
     """
-    return PromotionLedger(IMPROVE_LEDGER_DIR)
+    settings = get_settings()
+    return FirestorePromotionLedger(
+        project=settings.gcp_project_id, database=settings.firestore_database
+    )
 
 
 class ImproveRunRequest(BaseModel):

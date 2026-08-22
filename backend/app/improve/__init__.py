@@ -14,7 +14,12 @@ Module map:
   - `collector.py`     -- join automated signals + clinician labels into a `Dataset`.
   - `proposer.py`     -- the hard guard (`assert_target_allowed`) + `propose_candidate`.
   - `evaluator.py`    -- score a candidate; the hermetic default `ScoreFn`.
-  - `promote.py`      -- the append-only `PromotionLedger` + `canary_compare`.
+  - `ledger.py`        -- the `PromotionLedger` Protocol (persistence boundary).
+  - `promote.py`      -- `FilePromotionLedger` (hermetic-test default) + `canary_compare`.
+  - `inmemory_ledger.py` -- `InMemoryPromotionLedger` (dict-backed hermetic fake).
+  - `firestore_ledger.py` -- `FirestorePromotionLedger` (durable production default;
+    NOT imported here -- see this module's own docstring for why, mirroring
+    `app.storage.__init__` never importing `FirestoreRunRepository`).
   - `registry.py`     -- `resolve_artifact` (opt-in consumption seam).
   - `cycle.py`         -- `run_improvement_cycle`, the fail-closed orchestrator.
 """
@@ -25,6 +30,8 @@ from app.improve.collector import collect_dataset
 from app.improve.cycle import run_improvement_cycle
 from app.improve.errors import FrozenTargetError, ImproveError
 from app.improve.evaluator import ScoreFn, build_benchmark_score_fn, evaluate_candidate
+from app.improve.inmemory_ledger import InMemoryPromotionLedger
+from app.improve.ledger import PromotionLedger
 from app.improve.models import (
     Candidate,
     Dataset,
@@ -35,7 +42,7 @@ from app.improve.models import (
     PromotionRecord,
     TrainingCase,
 )
-from app.improve.promote import PromotionLedger, canary_compare
+from app.improve.promote import FilePromotionLedger, canary_compare
 from app.improve.proposer import Generator, assert_target_allowed, propose_candidate
 from app.improve.registry import resolve_artifact
 
@@ -43,11 +50,13 @@ __all__ = [
     "Candidate",
     "Dataset",
     "EvaluationResult",
+    "FilePromotionLedger",
     "FrozenTargetError",
     "Generator",
     "ImproveError",
     "ImproveTarget",
     "ImprovementReport",
+    "InMemoryPromotionLedger",
     "Metrics",
     "PromotionLedger",
     "PromotionRecord",

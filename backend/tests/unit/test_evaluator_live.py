@@ -15,7 +15,7 @@ from app.improve.cycle import run_improvement_cycle
 from app.improve.evaluator import evaluate_candidate
 from app.improve.evaluator_live import build_live_pipeline_score_fn
 from app.improve.models import Candidate, Dataset, ImproveTarget, Metrics, TrainingCase
-from app.improve.promote import PromotionLedger
+from app.improve.promote import FilePromotionLedger
 from app.pipeline.models import FindingResult, PatientRunResult, PatientRunSummary
 
 _NOW = datetime(2026, 8, 20, 12, 0, 0, tzinfo=UTC)
@@ -262,7 +262,7 @@ def _presentation(patient_id: str, claim_ids: list[str]) -> dict[str, object]:
 
 
 def test_cycle_with_a_live_style_score_fn_promotes_an_improving_candidate(tmp_path: Path) -> None:
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
 
     def generate(dataset: Dataset, target: ImproveTarget) -> Candidate:
         return Candidate(target=target, new_value="better prompt", rationale="proposed")
@@ -293,7 +293,7 @@ def test_cycle_with_a_live_style_score_fn_promotes_an_improving_candidate(tmp_pa
 
 
 def test_cycle_with_a_live_style_score_fn_rejects_a_regressing_candidate(tmp_path: Path) -> None:
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
     ledger.promote(
         ImproveTarget.MODEL_A_PROMPT, "already active", version="v0", rationale="seed", now=_NOW
     )

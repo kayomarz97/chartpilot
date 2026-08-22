@@ -3,8 +3,10 @@ change for exactly one AUTO-tier target.
 
 `assert_target_allowed` is the single choke point every proposal AND every
 promotion must pass through (spec: "defense in depth" -- called again,
-independently, in `app.improve.promote.PromotionLedger.promote` and
-`app.improve.cycle.run_improvement_cycle`, not trusted to have already run).
+independently, in every concrete `app.improve.ledger.PromotionLedger`
+implementation's `.promote()` (`FilePromotionLedger`, `InMemoryPromotionLedger`,
+`FirestorePromotionLedger`) and `app.improve.cycle.run_improvement_cycle`, not
+trusted to have already run).
 It is default-deny: anything that is not a value of `app.improve.models.
 ImproveTarget` is refused, whether or not it happens to be a KNOWN frozen
 name (`app.improve.models.FROZEN_TARGET_NAMES`) -- a brand-new FROZEN

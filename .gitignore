@@ -41,7 +41,3 @@ out/
 
 # Local phase evidence is committed (spec §65) — do NOT ignore evidence/phase_*.txt
 
-# Phase C outer self-improving loop: the promotion ledger is runtime state,
-# not source (app.improve.promote.PromotionLedger, app/api/routes.py's
-# get_improve_ledger default dir) — never commit what it writes.
-backend/app/improve/data/

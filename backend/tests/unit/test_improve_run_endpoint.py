@@ -19,8 +19,9 @@ from app.api import routes as api_routes
 from app.api.auth import require_oidc
 from app.config import get_settings
 from app.improve.evaluator import ScoreFn
+from app.improve.ledger import PromotionLedger
 from app.improve.models import Candidate, Dataset, ImproveTarget, Metrics
-from app.improve.promote import PromotionLedger
+from app.improve.promote import FilePromotionLedger
 from app.improve.proposer import Generator
 from app.main import app
 from app.storage.inmemory import InMemoryRunRepository
@@ -131,7 +132,7 @@ def test_accepted_cycle_returns_report_and_promotes(
 ) -> None:
     repo = InMemoryRunRepository()
     _seed_presentation(repo, "run-1", "patient-1")
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
     client = _client_with_overrides(
         monkeypatch,
         repo,
@@ -160,7 +161,7 @@ def test_rejected_cycle_returns_report_and_does_not_write_to_the_repo(
     repo = InMemoryRunRepository()
     _seed_presentation(repo, "run-1", "patient-1")
     presentations_before = repo.list_presentations("run-1")
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
     client = _client_with_overrides(
         monkeypatch,
         repo,
@@ -206,7 +207,7 @@ def test_reads_clinician_actions_across_every_patient_in_the_run(
             )
         ],
     )
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
 
     seen_datasets: list[Dataset] = []
 

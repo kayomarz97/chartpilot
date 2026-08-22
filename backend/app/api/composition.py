@@ -40,8 +40,8 @@ from app.fhir.transport import LocalFixtureTransport
 from app.gate.models import STAGE_ORDER, PatientStage, PatientStatus, is_terminal
 from app.improve.evaluator import ScoreFn
 from app.improve.evaluator_live import build_live_pipeline_score_fn
+from app.improve.firestore_ledger import FirestorePromotionLedger
 from app.improve.models import Dataset, ImproveTarget
-from app.improve.promote import PromotionLedger
 from app.improve.proposer import Generator
 from app.improve.proposer_llm import LlmProposer
 from app.improve.registry import resolve_artifact
@@ -56,7 +56,6 @@ from app.tasks.models import Checkpoint, RunTask
 __all__ = [
     "DEMO_DATA_DIR",
     "DEMO_PATIENT_IDS",
-    "IMPROVE_LEDGER_DIR",
     "run_demo_patient",
     "live_process_patient_handler",
     "DemoAppointmentSource",
@@ -70,16 +69,6 @@ __all__ = [
 #: at build time (the Dockerfile `COPY`s `app`, unlike `tests/`, which
 #: `.dockerignore` excludes -- see that file's "Tests / fixtures" section).
 DEMO_DATA_DIR = Path(__file__).resolve().parent.parent / "demo_data"
-
-#: Real (production) `PromotionLedger` location, created on first
-#: promotion. `app/` is packaged into the container (see `DEMO_DATA_DIR`'s
-#: docstring above), but this directory starts empty and is meant to
-#: accumulate state at runtime, not to be baked into the image with content
-#: -- see `.gitignore`. THE SAME constant `app.api.routes.get_improve_ledger`
-#: uses (imported from here, not redefined there) and that
-#: `live_process_patient_handler` below reads from -- one ledger location,
-#: shared by the write path (`POST /improve-run`) and the live read path.
-IMPROVE_LEDGER_DIR = Path(__file__).resolve().parent.parent / "improve" / "data" / "ledger"
 
 #: The FHIR `Patient.id` of every packaged demo bundle (see module docstring
 #: for why these are hyphenated, not the underscored filename stems).
@@ -238,32 +227,31 @@ def build_run_repository(settings: Settings) -> RunRepository:
     )
 
 
-def _resolve_live_model_a_system_instruction() -> str:
+def _resolve_live_model_a_system_instruction(settings: Settings) -> str:
     """The Model-A system instruction `live_process_patient_handler` should
     drive this run with: the ledger's active promoted `MODEL_A_PROMPT`
     version if one exists, else the pinned `MODEL_A_SYSTEM_INSTRUCTION`
     (spec §53 Phase C step (b), `app.improve.registry.resolve_artifact`).
 
-    HONESTY NOTE -- ledger durability: `IMPROVE_LEDGER_DIR` is a path on the
-    Cloud Run CONTAINER's local disk, which is EPHEMERAL -- scoped to one
-    instance, and lost on that instance's restart, redeploy, or scale-to-
-    zero, and never shared with any other concurrently-running instance
-    (Cloud Run may run several). A promotion accepted by `POST
-    /improve-run` therefore does NOT durably change what production serves
-    today: it only affects the same instance, only until it cycles, and
-    other instances handling other requests never see it at all. This is a
-    real gap, not a documented feature -- durable ledger storage (Firestore
-    or GCS, matching `app.storage.firestore_repo`'s already-durable pattern)
-    is a needed follow-up before promotion is a trustworthy production
-    lever. See `ARCHITECTURE.md`'s "self-improving loop" section.
+    DURABILITY: backed by `app.improve.firestore_ledger.
+    FirestorePromotionLedger`, NOT local container disk -- a promotion
+    accepted by `POST /improve-run` is visible to every Cloud Run instance
+    (not just the one that served that request) and survives instance
+    restarts, redeploys, and scale-to-zero, exactly like
+    `app.storage.firestore_repo.FirestoreRunRepository` already is for
+    patient data. This supersedes the earlier file-backed ledger, whose
+    writes lived on one instance's ephemeral local disk only.
 
-    Fails safe: any error reading/parsing the ledger (missing/unreadable
-    directory, permission error, a corrupted ledger or artifact file) falls
-    back to the pinned constant -- exactly as if the ledger were empty --
-    rather than ever breaking a patient run over ledger state.
+    Fails safe: any error constructing the ledger or reading/parsing its
+    state (a Firestore auth/permission error, a transient network error, a
+    corrupted record) falls back to the pinned constant -- exactly as if
+    the ledger were empty -- rather than ever breaking a patient run over
+    ledger state.
     """
     try:
-        ledger = PromotionLedger(IMPROVE_LEDGER_DIR)
+        ledger = FirestorePromotionLedger(
+            project=settings.gcp_project_id, database=settings.firestore_database
+        )
         return resolve_artifact(
             ImproveTarget.MODEL_A_PROMPT, MODEL_A_SYSTEM_INSTRUCTION, ledger=ledger
         )
@@ -279,15 +267,15 @@ def live_process_patient_handler(task: RunTask) -> Checkpoint:
     per-patient worker path -- everything else in this module is injectable
     and hermetically tested. As of Phase C step (b), also the only place
     that resolves the LIVE Model-A prompt from the promotion ledger (see
-    `_resolve_live_model_a_system_instruction`'s docstring for the Cloud Run
-    ephemeral-disk caveat) -- an empty ledger (true of every deployment
-    until the first accepted promotion) resolves to the pinned
+    `_resolve_live_model_a_system_instruction`'s docstring for the Firestore
+    durability note) -- an empty ledger (true of every deployment until the
+    first accepted promotion) resolves to the pinned
     `MODEL_A_SYSTEM_INSTRUCTION`, byte-identical to before this existed.
     """
     settings = get_settings()
     model_a, model_b = _build_live_gemini_clients(settings)
     repo = build_run_repository(settings)
-    model_a_system_instruction = _resolve_live_model_a_system_instruction()
+    model_a_system_instruction = _resolve_live_model_a_system_instruction(settings)
     return run_demo_patient(
         task,
         model_a=model_a,

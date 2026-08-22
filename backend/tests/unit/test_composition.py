@@ -32,8 +32,9 @@ from app.api.composition import (
 )
 from app.config import get_settings
 from app.gate.models import PatientStage, PatientStatus, is_terminal
+from app.improve.inmemory_ledger import InMemoryPromotionLedger
 from app.improve.models import ImproveTarget
-from app.improve.promote import PromotionLedger
+from app.improve.promote import FilePromotionLedger
 from app.improve.registry import resolve_artifact
 from app.main import app
 from app.storage.inmemory import InMemoryRunRepository
@@ -232,7 +233,7 @@ def test_run_demo_patient_resolves_promoted_prompt_from_ledger(tmp_path: Path) -
     """Wiring test: `resolve_artifact` over a `PromotionLedger` with an
     active promoted `MODEL_A_PROMPT`, passed through to `run_demo_patient`,
     drives Model A with the PROMOTED value -- not the pinned constant."""
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
     promoted_prompt = "PROMOTED MODEL A PROMPT -- from the ledger, not the pinned constant."
     ledger.promote(
         ImproveTarget.MODEL_A_PROMPT,
@@ -267,7 +268,7 @@ def test_run_demo_patient_resolves_promoted_prompt_from_ledger(tmp_path: Path) -
 def test_run_demo_patient_resolves_pinned_default_from_empty_ledger(tmp_path: Path) -> None:
     """The same wiring with an EMPTY ledger resolves back to the pinned
     constant -- byte-identical to not consulting the ledger at all."""
-    ledger = PromotionLedger(tmp_path)
+    ledger = FilePromotionLedger(tmp_path)
     resolved = resolve_artifact(
         ImproveTarget.MODEL_A_PROMPT, MODEL_A_SYSTEM_INSTRUCTION, ledger=ledger
     )
@@ -293,44 +294,68 @@ def test_run_demo_patient_resolves_pinned_default_from_empty_ledger(tmp_path: Pa
 
 # --------------------------------------------------------------------------
 # _resolve_live_model_a_system_instruction: the actual resolution helper
-# `live_process_patient_handler` calls. `IMPROVE_LEDGER_DIR` is monkeypatched
-# to `tmp_path` in both tests so nothing ever writes into the real
-# `app/improve/data/` directory (that dir does not exist in a fresh checkout;
-# a `PromotionLedger` would `mkdir` it as a side effect of construction).
+# `live_process_patient_handler` calls. It builds a real
+# `FirestorePromotionLedger` internally -- these tests monkeypatch that
+# module-level name to a fake/raising stand-in so nothing ever touches a
+# real Firestore project (per `FirestorePromotionLedger`'s own `# VERIFY-LIVE`
+# markers, which no hermetic test may exercise).
 # --------------------------------------------------------------------------
 
 
 def test_resolve_live_model_a_system_instruction_default_with_empty_ledger(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """An empty ledger (true of every deployment before any promotion) ->
     the pinned `MODEL_A_SYSTEM_INSTRUCTION`, byte-identical to before the
     ledger-consuming wiring existed."""
-    monkeypatch.setattr(api_composition, "IMPROVE_LEDGER_DIR", tmp_path)
+    _set_required_env(monkeypatch)
+    monkeypatch.setattr(
+        api_composition, "FirestorePromotionLedger", lambda **_kwargs: InMemoryPromotionLedger()
+    )
 
-    resolved = api_composition._resolve_live_model_a_system_instruction()
+    resolved = api_composition._resolve_live_model_a_system_instruction(get_settings())
 
     assert resolved == MODEL_A_SYSTEM_INSTRUCTION
 
 
 def test_resolve_live_model_a_system_instruction_returns_promoted_value(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A ledger with an active promoted `MODEL_A_PROMPT` at `IMPROVE_LEDGER_DIR`
-    -> that promoted value, not the pinned constant."""
-    monkeypatch.setattr(api_composition, "IMPROVE_LEDGER_DIR", tmp_path)
+    """A ledger with an active promoted `MODEL_A_PROMPT` -> that promoted
+    value, not the pinned constant."""
+    _set_required_env(monkeypatch)
+    fake_ledger = InMemoryPromotionLedger()
     promoted_prompt = "LIVE-RESOLVED PROMOTED PROMPT -- from the ledger."
-    PromotionLedger(tmp_path).promote(
+    fake_ledger.promote(
         ImproveTarget.MODEL_A_PROMPT,
         promoted_prompt,
         version="v1",
         rationale="test promotion",
         now=_NOW,
     )
+    monkeypatch.setattr(api_composition, "FirestorePromotionLedger", lambda **_kwargs: fake_ledger)
 
-    resolved = api_composition._resolve_live_model_a_system_instruction()
+    resolved = api_composition._resolve_live_model_a_system_instruction(get_settings())
 
     assert resolved == promoted_prompt
+
+
+def test_resolve_live_model_a_system_instruction_fails_safe_when_ledger_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ledger construction/read error (e.g. a Firestore auth/permission
+    error) must never break a patient run -- it falls back to the pinned
+    constant, exactly as if the ledger were empty."""
+    _set_required_env(monkeypatch)
+
+    def _raise(**_kwargs: object) -> InMemoryPromotionLedger:
+        raise RuntimeError("simulated Firestore failure")
+
+    monkeypatch.setattr(api_composition, "FirestorePromotionLedger", _raise)
+
+    resolved = api_composition._resolve_live_model_a_system_instruction(get_settings())
+
+    assert resolved == MODEL_A_SYSTEM_INSTRUCTION
 
 
 # --------------------------------------------------------------------------

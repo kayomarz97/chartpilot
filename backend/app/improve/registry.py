@@ -20,8 +20,8 @@ today.
 
 from __future__ import annotations
 
+from app.improve.ledger import PromotionLedger
 from app.improve.models import ImproveTarget
-from app.improve.promote import PromotionLedger
 
 __all__ = ["resolve_artifact"]
 
