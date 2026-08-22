@@ -167,3 +167,36 @@ Decision (user, 2026-08-21): the user explicitly instructed pushing to `main`. T
 global rule ("never push main directly; the user merges main") for this occasion only. Executed as a
 fast-forward merge of `dev` into `main` + `git push origin main`, after `dev` is green and pushed. The default
 (dev-only, user merges main) resumes afterward unless the user says otherwise.
+
+## TD-014 — Self-improving loop: two feedback loops, a hard tier boundary, no self-tuning on the held-out eval
+Decision (user, 2026-08-22): add a production-style self-improving loop on top of the existing pipeline,
+built by Sonnet subagents with Opus verifying (TD-009). Two loops:
+- **Inner loop (Phase A, `app/pipeline/runner.py` + `app/agent/revise.py`):** when Model A's
+  `verbatim_supporting_span` fails SPAN_VERIFICATION, feed the DETERMINISTIC failure reason + the real
+  source text back and let Model A re-quote, bounded by `max_revise_iterations` (default 2). A safety guard
+  (`_revision_is_safe`) forbids any change to `claim_id`/`claim_type`/`statement`/`patient_evidence` and lets
+  evidence sources be dropped but never added/switched — the loop repairs CITATIONS only, never clinical
+  meaning. Model B + the fail-closed final gate stay authoritative; budget exhaustion or any exception keeps
+  the failing verdict (never a silent "no findings").
+- **Outer loop (Phase C, `app/improve/`):** collect the persisted signals (automated gate/Model-B outcomes +
+  the Phase B clinician CONFIRM/OVERRIDE/CORRECT labels) → propose ONE change to an AUTO-tier target → prove
+  it beats the frozen benchmark on a HELD-OUT slice → canary → promote to a versioned ledger. Exposed as
+  OIDC-only `POST /improve-run`.
+
+The three-tier boundary (the reason this is safe to ship in a clinical context):
+| Tier | Targets | Who may change it |
+|---|---|---|
+| **AUTO** | `MODEL_A_PROMPT`, `EVIDENCE_RANKING` | the loop, IF a candidate beats the frozen benchmark with zero regression |
+| **HUMAN-GATED** | Model-B threshold, execution budgets | the loop proposes a diff; a human approves |
+| **FROZEN** | clinical rules (`K_HIGH_RISK_001`), validity math (eGFR/CKD-EPI), the fail-closed gate, normalization | the loop may DRAFT, never self-apply — `assert_target_allowed` is default-deny and refuses these |
+
+Two invariants make it honest: **(1) determinism is preserved** — prompts stay pinned Python constants; the
+loop writes versioned artifacts to a ledger and a resolver returns the active version or the pinned default
+(empty ledger ⇒ byte-identical to today; live consumption is deliberately opt-in, `run_patient` unchanged).
+**(2) No training on the held-out eval** — the §22 corruption suite is the frozen benchmark (never mutated by
+the loop) and clinician cases split deterministically into train (propose) vs holdout (evaluate). This
+directly avoids the trap the README already calls out (Model B measured at 75% false-reject: a loop that
+self-tuned against its own suite would just game the number). Honest scope: the default LLM-backed proposer is
+a clearly-marked no-op placeholder and the default hermetic score_fn can't vary with candidate text, so the
+stock loop always fail-closed rejects — the machinery is complete + tested; the live proposer is future wiring
+(needs real accumulated clinician data + a `docs-researcher` pass), not a fabricated live call.

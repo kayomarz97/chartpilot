@@ -134,3 +134,32 @@ name/value problems, contrast ratios it can compute) but does not verify
 actual keyboard operability end to end or how the UI reads without color as
 a channel — both require a human pass before this can be called complete
 against §57A.
+
+## Self-improving loop (Phases A–C, 2026-08-22)
+
+The self-improving loop (TD-014) is proven by the **hermetic, network-blocked**
+test suite, not yet by a live measurement — stated honestly so no number here
+is mistaken for a live result.
+
+**Inner loop — citation repair (Phase A).** Deterministic unit tests
+(`tests/unit/test_pipeline_revise_loop.py`, `test_agent_revise.py`) prove the
+mechanism: a claim with an unverifiable span is **repaired to VERIFIED** within
+budget and the corrected span is what gets persisted; budget exhaustion leaves
+the claim NOT verified (**fail-closed**, never a silent pass); the safety guard
+**rejects** any revision that changes the clinical statement or adds an evidence
+source; `max_revise_iterations=0` is byte-identical to the pre-loop pipeline.
+**Not yet measured: a live citation-repair RATE** (what fraction of real
+Model-A span failures the loop fixes end to end) — that needs a live run and is
+deliberately not estimated here.
+
+**Outer loop (Phase C).** Tests (`tests/unit/test_improve_*.py`, 41 cases)
+prove the guarantees, not an improvement number: the tier guard
+`assert_target_allowed` is **default-deny** (a FROZEN or unknown target raises,
+at proposal entry, on the returned candidate, and again before promotion); the
+train/holdout split is deterministic and disjoint (no self-tuning on the
+held-out eval); acceptance requires strict improvement with **zero regression on
+every axis**; the cycle is **fail-closed** (any error → rejected report, active
+artifact unchanged, never raises). **Not yet measured: a live improvement
+delta** — the default proposer is a marked no-op placeholder, so the stock loop
+always rejects; a real before/after metric requires the live LLM-backed proposer
+and accumulated clinician labels, which are future work.

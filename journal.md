@@ -1,6 +1,28 @@
 # Project Journal — doctor_helper (Pre-Clinic Chart-Prep Agent)
 
 ## Current Status
+SELF-IMPROVING LOOP (Phases A–C) COMPLETE + VERIFIED (2026-08-22) — built by Sonnet subagents, Opus
+independently re-ran `make check` + read the load-bearing files + committed on `dev` (TD-009). Decision: TD-014.
+  - PHASE A — inner loop (`app/agent/revise.py`, `app/pipeline/runner.py`): gate-failure → revise → retry.
+    Repairs SPAN_VERIFICATION failures only, bounded (default 2); `_revision_is_safe` guard forbids changing
+    statement/claim_id/claim_type/patient_evidence (citations-only); fail-closed on budget/exception. 11 tests.
+  - PHASE B — clinician labels in UI + signals (`app/feedback/`, `app/api/routes.py`,
+    `frontend/components/ClinicianActionControl.tsx`, `frontend/app/api/clinician-action/route.ts`):
+    per-finding CONFIRM/OVERRIDE/CORRECT + untrusted note, persisted via a NEW OIDC-only endpoint reached
+    through the same authenticated-proxy pattern as GET /runs (security posture preserved); `revisionAttempts`
+    added to the presentation read-model. Backend + frontend green (363 py tests, 9 vitest).
+  - PHASE C — outer loop (`app/improve/`: models/collector/proposer/evaluator/promote/registry/cycle):
+    collect → propose(train) → evaluate(holdout) → canary → promote to a versioned ledger; OIDC-only
+    `POST /improve-run`. Three-tier guard `assert_target_allowed` is DEFAULT-DENY (FROZEN rules/gate/validity
+    can never be a target); determinism preserved (pinned constants stay the default); fail-closed cycle. 41 tests.
+  - Setup: project `CLAUDE.md` (standing order "Sonnet builds, Opus orchestrates+verifies+commits" = TD-009;
+    "keep ARCHITECTURE.md true in the same change"), `ARCHITECTURE.md` (backend map, kept current each phase),
+    plan `.claude/plans/2026-08-22-self-improving-loop-agent.md`. Full suite: 414 py + 9 vitest green.
+  - HONEST SCOPE: the live LLM-backed proposer is a marked no-op placeholder (stock loop always fail-closed
+    rejects); it needs real accumulated clinician data + a docs-researcher pass before it proposes for real.
+  - NOT YET: not deployed (no infra run this session); not pushed (user merges/pushes); no live improve-run.
+
+## Superseded status log
 Phase: 21 COMPLETE + DEPLOYED (2026-08-22) — enrich demo, wire UI↔live backend, PubMed guidelines, README.
 PHASE 21 (4 Sonnet workstreams built, Opus verified+integrated+deployed; decisions TD-010..013):
   - ENRICHED demo FHIR bundles (23–40 resources each, multi-year lab trends) + byte-identical tests/fixtures;
@@ -402,4 +424,8 @@ Pending: hackathon identity + deadline; Gemini access + Model A/B split; region/
   as Model B where temperature is the correct determinism lever. Needs reconciliation in PLAN.
 
 ## Architecture Changes
-- (none yet)
+- 2026-08-22 (Self-improving loop A–C): added the inner revise loop to `app/pipeline/runner.py`
+  (+ `app/agent/revise.py`), the `app/feedback/` clinician-label model + OIDC endpoint + frontend control,
+  and the isolated `app/improve/` outer-loop package (collector/proposer/evaluator/promote/registry/cycle) +
+  `POST /improve-run`. Full backend map lives in `ARCHITECTURE.md` (now the read-first codebase map); rationale
+  in TD-014. Live pipeline behavior is byte-identical by default (loop consumption is opt-in via the ledger).
