@@ -28,10 +28,19 @@
   ever append a clinician label to the `clinician_actions` subcollection
   (`app.storage.models.clinician_actions_collection_path`) -- it never
   touches a patient's claims, evidence, or gate verdicts.
+- `POST /improve-run` -- OIDC-only (Phase C, spec §53): the outer
+  self-improving loop's entry point. Reads a run's persisted presentations
+  + clinician actions, runs `app.improve.cycle.run_improvement_cycle` for
+  ONE `app.improve.models.ImproveTarget`, and returns its
+  `ImprovementReport`. Fail-closed by construction (`run_improvement_cycle`
+  never raises); its only possible write is an append to the injected
+  `PromotionLedger`, and only on acceptance -- it never touches a patient's
+  claims, evidence, or gate verdicts either.
 
-All three OIDC endpoints are protected by `require_oidc` (spec §76A.1) and get
+All four OIDC endpoints are protected by `require_oidc` (spec §76A.1) and get
 their collaborators (`appointment_source`, `queue`, `clock`,
-`process_patient_handler`) through FastAPI dependencies so tests can swap in
+`process_patient_handler`, `get_improve_generator`, `get_improve_score_fn`,
+`get_improve_ledger`) through FastAPI dependencies so tests can swap in
 hermetic fakes via `app.dependency_overrides`. `GET /runs/{run_id}` follows
 the same injectable-provider pattern (`get_run_repository`) for the same
 testability reason, just without an auth dependency. The real (production)
@@ -47,6 +56,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
@@ -57,10 +67,18 @@ from app.api.composition import (
     DemoAppointmentSource,
     build_live_queue,
     build_run_repository,
+    get_improve_generator,
+    get_improve_score_fn,
     live_process_patient_handler,
 )
 from app.config import get_settings
 from app.feedback.models import ClinicianAction, ClinicianActionKind
+from app.improve.collector import collect_dataset
+from app.improve.cycle import run_improvement_cycle
+from app.improve.evaluator import ScoreFn
+from app.improve.models import Dataset, ImprovementReport, ImproveTarget
+from app.improve.promote import PromotionLedger
+from app.improve.proposer import Generator
 from app.storage.models import clinician_actions_collection_path
 from app.storage.repository import RunRepository
 from app.tasks.appointments import AppointmentSource
@@ -268,3 +286,95 @@ def record_clinician_action(
         [(action.action_id, json.loads(action.model_dump_json()))],
     )
     return action
+
+
+# --------------------------------------------------------------------------
+# POST /improve-run -- OIDC-only, Phase C outer self-improving loop entry
+# point (spec §53). Reads what Phase B already collected (automated
+# per-finding signals on every persisted presentation + clinician labels)
+# and runs ONE `run_improvement_cycle`. Never writes to a patient's claims,
+# evidence, or gate verdicts -- its only possible write is an append to the
+# `PromotionLedger` injected via `get_improve_ledger`, and even that only
+# happens if the cycle accepts a candidate (fail-closed otherwise).
+# --------------------------------------------------------------------------
+
+#: Real (production) ledger location, created on first promotion. `app/`
+#: is packaged into the container (`app.api.composition.DEMO_DATA_DIR`'s
+#: docstring), but this directory starts empty and is meant to accumulate
+#: state at runtime, not to be baked into the image with content -- see
+#: `.gitignore`.
+_IMPROVE_LEDGER_DIR = Path(__file__).resolve().parent.parent / "improve" / "data" / "ledger"
+
+
+def get_improve_ledger() -> PromotionLedger:
+    """Real (production) `PromotionLedger` provider: file-backed under
+    `app/improve/data/ledger`. Tests MUST override this via
+    `app.dependency_overrides[get_improve_ledger]` with a
+    `PromotionLedger(tmp_path)` so the hermetic suite never writes into the
+    repo.
+    """
+    return PromotionLedger(_IMPROVE_LEDGER_DIR)
+
+
+class ImproveRunRequest(BaseModel):
+    """Body of `POST /improve-run`. `version` identifies the artifact
+    version being proposed (caller-supplied, like `run_id` on
+    `EnqueueRunRequest`, keeping this endpoint's ledger writes deterministic
+    rather than minting randomness server-side)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str
+    target: ImproveTarget = ImproveTarget.MODEL_A_PROMPT
+    version: str
+
+
+def _collect_clinician_actions_for_run(
+    repo: RunRepository, run_id: str, presentations: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Read every clinician action across every patient persisted for
+    `run_id`, by walking the patient ids already present on `presentations`
+    (there is no separate "list of patient ids" -- `list_presentations`'
+    own output is the source of truth for which patients exist in a run)."""
+    actions: list[dict[str, Any]] = []
+    for presentation in presentations:
+        patient_id = presentation.get("patientId")
+        if not patient_id:
+            continue
+        docs = repo.read_documents(clinician_actions_collection_path(run_id, str(patient_id)))
+        actions.extend(data for _doc_id, data in docs)
+    return actions
+
+
+@router.post("/improve-run", response_model=ImprovementReport)
+def improve_run_endpoint(
+    body: ImproveRunRequest,
+    _claims: _OidcClaims,
+    repo: Annotated[RunRepository, Depends(get_run_repository)],
+    clock: Annotated[Callable[[], datetime], Depends(get_clock)],
+    generate: Annotated[Generator, Depends(get_improve_generator)],
+    score_fn_factory: Annotated[Callable[[Dataset], ScoreFn], Depends(get_improve_score_fn)],
+    ledger: Annotated[PromotionLedger, Depends(get_improve_ledger)],
+) -> ImprovementReport:
+    """Read this run's collected signals and run ONE Phase C improvement
+    cycle for `body.target`. Always returns an `ImprovementReport` --
+    `run_improvement_cycle` is fail-closed by construction and never
+    raises; this endpoint adds no error handling of its own on top of it.
+    """
+    presentations = repo.list_presentations(body.run_id)
+    clinician_actions = _collect_clinician_actions_for_run(repo, body.run_id, presentations)
+
+    dataset = collect_dataset(presentations=presentations, clinician_actions=clinician_actions)
+    _train, holdout = dataset.split()
+    score_fn = score_fn_factory(holdout)
+
+    return run_improvement_cycle(
+        presentations=presentations,
+        clinician_actions=clinician_actions,
+        target=body.target,
+        generate=generate,
+        score_fn=score_fn,
+        ledger=ledger,
+        now=clock(),
+        version=body.version,
+    )

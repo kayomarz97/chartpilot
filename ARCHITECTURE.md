@@ -29,7 +29,9 @@ spans) → `CITATION_CHECK` (deterministic gates 1–4, `app/citation`) → `IND
 serves the persisted **presentation** read-model to the Next.js UI. In the UI, a clinician may attach
 a **CONFIRM/OVERRIDE/CORRECT label** to any finding (Phase B, `app/feedback`); that label plus the
 automated per-finding signals already on `FindingResult` (citation verdict, Model B verdict, revision
-attempts) are the outer self-improving loop's (planned Phase C) training signal.
+attempts) are the outer self-improving loop's (Phase C, `app/improve`) training signal. `POST
+/improve-run` (OIDC) runs one improvement cycle on demand for a given `run_id`; nothing calls it
+automatically yet (no Cloud Scheduler job wired for it) -- see the section below.
 
 **The safety invariant (SPEC §53):** deterministic code owns every fact; free text is `trusted=False`
 and can never mutate a fact/rule/gate; a claim that fails any gate can never be `VERIFIED`; failures
@@ -130,12 +132,25 @@ surface as a status (`FAILED`/`FLAGGED_FOR_REVIEW`), never a silent "no findings
 |---|---|
 | `feedback/models.py` | **`ClinicianAction(BaseModel, frozen, extra="forbid")`** — one clinician label on one claim: `action_id` (client-supplied idempotency key = Firestore doc id), `run_id`, `patient_id`, `claim_id`, `action: ClinicianActionKind`, `note: str = ""` (**`trusted: Literal[False] = False`** — a label, never a fact/rule/gate input), `verdict_shown: str \| None`, `recorded_at` (tz-aware; naive rejected). Enum **`ClinicianActionKind`**: `confirm, override, correct`. Persisted via the generic `RunRepository.write_documents` (no new Protocol method), read via `app.api.routes.record_clinician_action`. |
 
+### Outer self-improving loop — `app/improve/` (Phase C, spec §53, IMPLEMENTED)
+| Path | Key symbols / when to touch |
+|---|---|
+| `improve/models.py` | **`ImproveTarget(StrEnum)`** — the ONLY AUTO-tunable targets: `model_a_prompt`, `evidence_ranking`. **`FROZEN_TARGET_NAMES`** — documented known-forbidden identifiers (enforcement is default-deny, not this list). `TrainingCase`, **`case_is_automated_flag(case)`**, `Dataset` (`.failure_museum`, `.split()->(train, holdout)` — deterministic SHA-256-of-`claim_id` partition, no RNG), `Candidate` (`extra="forbid"`), `Metrics`, `EvaluationResult`, `PromotionRecord`, `ImprovementReport`. |
+| `improve/errors.py` | `ImproveError`, **`FrozenTargetError`** — the hard stop. |
+| `improve/collector.py` | **`collect_dataset(*, presentations, clinician_actions)->Dataset`** — pure join of `list_presentations` output + clinician-action docs by `(patient_id, claim_id)`, defensive `.get(...)` throughout. |
+| `improve/proposer.py` | **`assert_target_allowed(target: str)`** — the default-deny guard, raises `FrozenTargetError`; called at proposal entry AND again on the returned candidate's target (defense in depth). `AUTO_TIER_TARGETS`, `Generator` type alias, **`propose_candidate(dataset, *, target, generate)`** — calls `generate` on the TRAIN split ONLY. |
+| `improve/evaluator.py` | `ScoreFn` type alias, **`compare_metrics(before, after)->(improved, regressed)`** (higher set_d_blocked/set_m_caught/clinician_agreement better, higher false_reject worse; ANY regression blocks), **`evaluate_candidate(candidate, *, active_value, score_fn)`** (`accept = improved and not regressed`), **`build_benchmark_score_fn(dataset_holdout)->ScoreFn`** — the concrete hermetic default (frozen §22 corruption suite via a fixed fixture + reference Model-B stand-in, plus holdout `clinician_agreement`; **never varies with the candidate value** — no live model call, see its docstring). |
+| `improve/promote.py` | **`PromotionLedger(base_dir)`** — append-only, file-backed (`.active(target)`, `.active_value(target)`, `.promote(target, value, *, version, rationale, now)`, `.rollback(target)`; no clock/RNG, caller-supplied `now`/`version`). **`canary_compare(candidate_value, active_value, *, score_fn)->bool`** — second independent regression check before promotion. |
+| `improve/registry.py` | **`resolve_artifact(target, default, *, ledger=None)->str`** — empty/`None` ledger returns `default` byte-identical. **Deliberately NOT wired into `run_patient`** — opt-in only (see below). |
+| `improve/cycle.py` | **`run_improvement_cycle(*, presentations, clinician_actions, target, generate, score_fn, ledger, now, version)->ImprovementReport`** — collect → split → propose(train) → evaluate(holdout) → canary → promote; wraps propose/evaluate and canary/promote in `try/except Exception`, fail-closed (never raises, never promotes on uncertainty). |
+| `improve/data/ledger/` | Runtime-only `PromotionLedger` storage (gitignored) — never hand-edited, never committed. |
+
 ### API + config — `app/api/`, `app/config.py`, `app/main.py`
 | Path | Key symbols |
 |---|---|
-| `api/routes.py` | **`router`**; `POST /enqueue-run` + `POST /tasks/process-patient` (OIDC via `require_oidc`); **`GET /runs/{run_id}` PUBLIC** (returns `list_presentations`, `[]` not 404 for unknown); **`POST /runs/{run_id}/patients/{patient_id}/clinician-action`** (Phase B, OIDC via `require_oidc`) — persists one `ClinicianAction` (body: `claim_id, action, note="", verdict_shown=None, action_id`) via `write_documents(clinician_actions_collection_path(...), ...)`, `action_id` as doc id for idempotent re-submit; reached only via the frontend's authenticated proxy, never a direct browser call. DI providers `get_queue`, `get_run_repository`, `get_process_patient_handler`, `get_clock`. |
+| `api/routes.py` | **`router`**; `POST /enqueue-run` + `POST /tasks/process-patient` (OIDC via `require_oidc`); **`GET /runs/{run_id}` PUBLIC** (returns `list_presentations`, `[]` not 404 for unknown); **`POST /runs/{run_id}/patients/{patient_id}/clinician-action`** (Phase B, OIDC via `require_oidc`) — persists one `ClinicianAction` (body: `claim_id, action, note="", verdict_shown=None, action_id`) via `write_documents(clinician_actions_collection_path(...), ...)`, `action_id` as doc id for idempotent re-submit; reached only via the frontend's authenticated proxy, never a direct browser call. **`POST /improve-run`** (Phase C, OIDC via `require_oidc`) — body `run_id, target=model_a_prompt, version`; reads `list_presentations(run_id)` + every patient's `clinician_actions` subcollection, runs `app.improve.cycle.run_improvement_cycle`, returns its `ImprovementReport`; its only possible write is an append to the injected `PromotionLedger`, on acceptance only. DI providers `get_queue`, `get_run_repository`, `get_process_patient_handler`, `get_clock`, `get_improve_generator`/`get_improve_score_fn` (from `app.api.composition`), `get_improve_ledger` (default dir `app/improve/data/ledger`). |
 | `api/presentation.py` | **`build_presentation(result, *, patient_name)->dict`** — camelCase UI payload (`patientId/status/findings/timeline/labs`; each finding also carries `revisionAttempts` from `FindingResult.revision_attempts`, Phase B). Pure. `_LAB_THRESHOLDS` (potassium/sodium/creatinine/egfr, egfr `inverted`). |
-| `api/composition.py` | **`live_process_patient_handler(task)`** (prod wiring: real Gemini + Firestore), **`run_demo_patient(...)`** (hermetic), `build_run_repository`, `build_live_queue`, `DEMO_PATIENT_IDS`. |
+| `api/composition.py` | **`live_process_patient_handler(task)`** (prod wiring: real Gemini + Firestore), **`run_demo_patient(...)`** (hermetic), `build_run_repository`, `build_live_queue`, `DEMO_PATIENT_IDS`. Phase C: **`get_improve_generator()->Generator`**, **`get_improve_score_fn()->Callable[[Dataset], ScoreFn]`** (returns `app.improve.evaluator.build_benchmark_score_fn`) — the `/improve-run` composition-root providers; deliberately NOT `# VERIFY-LIVE` (neither touches the network — the default generator is a safe no-op placeholder pending a real LLM-backed proposer, see its docstring). |
 | `api/auth.py` | `require_oidc` — fails CLOSED if `oidc_audience` unset. |
 | `config.py` | **`Settings(BaseSettings)`**, **`get_settings()`** (`@lru_cache`; import never raises; tests call `get_settings.cache_clear()`). |
 | `main.py` | **`app = FastAPI(title="ChartPilot Backend")`**; `GET /health` (503 lists `missing_fields` names only). CORS `methods=["GET"]`. `DEFAULT_PORT=8000`. |
@@ -212,16 +227,22 @@ cd frontend && pnpm install && pnpm run build && pnpm test   # frontend build + 
 
 ---
 
-## Where the self-improving loop (planned) attaches
+## Where the self-improving loop (IMPLEMENTED, Phase C) attaches
 
-See `.claude/plans/2026-08-22-self-improving-loop-agent.md`. Tier boundary this map enforces:
-- **AUTO-tunable** (loop may change if it beats the frozen benchmark): `agent/prompts.py`,
-  evidence retrieval ranking in `app/evidence/`, inner-retry strategy in `pipeline/runner.py`.
-- **HUMAN-GATED** (loop proposes a diff, human approves): Model-B threshold in
-  `review/corruption.py::release_threshold_met`, `ExecutionBudget` values.
-- **FROZEN** (loop may draft, never self-apply): `app/rules/`, `app/validation/metrics.py`,
-  `gate/claim_gate.py`, `app/normalize/`. The planned `app/improve/proposer.py` must raise if a
-  candidate touches these.
+See `.claude/plans/2026-08-22-self-improving-loop-agent.md` and `app/improve/` (file map above).
+Tier boundary this map enforces, now backed by code (`app/improve/models.py::ImproveTarget`,
+`app/improve/proposer.py::assert_target_allowed`):
+- **AUTO-tunable** (loop may propose + auto-promote if it beats the frozen benchmark):
+  `ImproveTarget.MODEL_A_PROMPT` (`agent/prompts.py`), `ImproveTarget.EVIDENCE_RANKING` (evidence
+  retrieval ranking in `app/evidence/`). These are the ONLY two values `ImproveTarget` has.
+- **HUMAN-GATED** (loop may propose a diff, human approves; not yet a code path in `app/improve/`):
+  Model-B threshold in `review/corruption.py::release_threshold_met`, `ExecutionBudget` values.
+- **FROZEN** (loop may never self-apply): `app/rules/`, `app/validation/metrics.py`,
+  `gate/claim_gate.py`, `app/normalize/`. `app/improve/proposer.py::assert_target_allowed` raises
+  `FrozenTargetError` for any target outside the AUTO allowlist above (default-deny -- an
+  unrecognized target is refused exactly like a documented FROZEN one); called at BOTH proposal
+  entry (`propose_candidate`) and immediately before promotion
+  (`PromotionLedger.promote`/`run_improvement_cycle`) -- defense in depth.
 
 **Training signal (Phase B, already collected):** `app/feedback/models.py::ClinicianAction`
 (CONFIRM/OVERRIDE/CORRECT + untrusted note, one per claim, from the UI's per-finding label control
@@ -229,5 +250,28 @@ in `frontend/components/ClinicianActionControl.tsx` via the same-origin OIDC pro
 `frontend/app/api/clinician-action/route.ts` → `POST /runs/{run_id}/patients/{patient_id}/
 clinician-action`) plus the automated per-finding signals already on `FindingResult`
 (`citationVerdict`, `modelBFinding`/`modelBShouldReject`, `verdict`, `revisionAttempts` — all
-readable from `list_presentations`/`build_presentation`'s output). Phase C reads both to score
-candidate prompt/retrieval changes against real clinician agreement.
+readable from `list_presentations`/`build_presentation`'s output). `app/improve/collector.py::
+collect_dataset` joins both into a `Dataset`; `Dataset.split()` deterministically (SHA-256 of
+`claim_id`, no RNG) partitions it into a TRAIN slice (fed to the proposer only) and a HELD-OUT
+slice (fed to the evaluator only) -- enforced in code so the loop can never train on the same cases
+it is graded against (the Model-B "game your own number" trap this README calls out elsewhere).
+
+**No training on the held-out eval, in code:** `app/review/corruption.py` (the §22 frozen
+benchmark) is never imported by `app/improve/` in a way that mutates it --
+`evaluator.py::build_benchmark_score_fn` only calls `measure_suite`/reads `SET_M_CORRUPTIONS`,
+exactly like `tests/unit/test_corruption_suite.py` does.
+
+**Determinism preserved:** `agent/prompts.py::MODEL_A_SYSTEM_INSTRUCTION` stays a pinned Python
+constant; `app/improve/registry.py::resolve_artifact(target, default, *, ledger=None)` returns the
+ledger's active promoted value if one exists, else `default` -- an empty ledger (true of every
+deployment today) is byte-identical to not calling it. **`resolve_artifact` is deliberately NOT
+wired into `app.pipeline.runner.run_patient`** by this phase -- live consumption of a promoted
+artifact is a separate, explicitly-reviewed opt-in decision with its own blast radius (a promoted
+prompt actually driving Model A calls in production), left for a later change. `POST /improve-run`
+(`app/api/routes.py`) can accept and promote a candidate into the ledger today; nothing reads that
+ledger back into the live pipeline yet.
+
+**Fail-closed:** `app/improve/cycle.py::run_improvement_cycle` wraps propose/evaluate and
+canary/promote in `try/except Exception`, returning a rejected `ImprovementReport` (never raising,
+never promoting) on any error -- a bug in a candidate generator or a `ScoreFn` cannot corrupt the
+ledger or crash `POST /improve-run`.

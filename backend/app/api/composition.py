@@ -37,6 +37,9 @@ from app.api.presentation import build_presentation
 from app.config import Settings, get_settings
 from app.fhir.transport import LocalFixtureTransport
 from app.gate.models import STAGE_ORDER, PatientStage, PatientStatus, is_terminal
+from app.improve.evaluator import ScoreFn, build_benchmark_score_fn
+from app.improve.models import Candidate, Dataset, ImproveTarget
+from app.improve.proposer import Generator
 from app.pipeline.demo_evidence import load_demo_snapshot
 from app.pipeline.runner import run_patient
 from app.storage.firestore_repo import FirestoreRunRepository
@@ -52,6 +55,8 @@ __all__ = [
     "DemoAppointmentSource",
     "build_live_queue",
     "build_run_repository",
+    "get_improve_generator",
+    "get_improve_score_fn",
 ]
 
 #: `app/api/composition.py` -> `app/api` -> `app` -> `app/demo_data`. Packaged
@@ -264,3 +269,64 @@ def build_live_queue(settings: Settings) -> CloudTasksQueue:
         service_account_email=settings.tasks_invoker_sa,
         audience=settings.oidc_audience,
     )
+
+
+# --------------------------------------------------------------------------
+# Phase C: outer self-improving loop -- composition-root providers for
+# `POST /improve-run` (`app.api.routes`). Both are deliberately NOT marked
+# `# VERIFY-LIVE` like `_build_live_gemini_clients`/`build_run_repository`
+# above: neither touches the network. A genuine live-model-backed proposer
+# (one that actually asks an LLM to draft a new prompt) is real new scope
+# -- its own pinned model, its own prompt, its own docs-researcher pass --
+# that this phase does not implement; see each function's docstring for why
+# that is a *safe* thing to defer, not a shortcut around this phase's
+# safety design.
+# --------------------------------------------------------------------------
+
+
+def _placeholder_improve_generate(dataset: Dataset, target: ImproveTarget) -> Candidate:
+    """The default (production) `Generator`: a NO-OP placeholder that
+    proposes an EMPTY `new_value` -- never a live-model-authored diff.
+
+    Combined with `build_benchmark_score_fn` (whose corruption-axis metrics
+    do not vary with the candidate's `new_value` -- see that function's
+    docstring), a candidate from this generator can never score as an
+    improvement, so `POST /improve-run` is safe to deploy today: it always
+    fail-closed rejects until a real LLM-backed proposer replaces this
+    function behind `get_improve_generator`'s dependency-injection seam
+    (everything downstream -- `propose_candidate`'s guard,
+    `evaluate_candidate`, `PromotionLedger` -- is already fully wired and
+    needs no change when that happens).
+    """
+    return Candidate(
+        target=target,
+        new_value="",
+        rationale=(
+            "placeholder generator: no live LLM-backed proposer wired yet "
+            f"(train split had {len(dataset.cases)} case(s) available)"
+        ),
+    )
+
+
+def get_improve_generator() -> Generator:
+    """Real (production) `Generator` provider for `POST /improve-run`. See
+    `_placeholder_improve_generate` for why this is deliberately a safe
+    no-op today. Tests MUST override this via
+    `app.dependency_overrides[api_routes.get_improve_generator]` with a
+    fake that actually varies its output.
+    """
+    return _placeholder_improve_generate
+
+
+def get_improve_score_fn() -> Callable[[Dataset], ScoreFn]:
+    """Real (production) `ScoreFn`-factory provider for `POST /improve-run`.
+
+    Returns `app.improve.evaluator.build_benchmark_score_fn` itself: the
+    concrete hermetic default described in that function's docstring
+    (frozen §22 corruption suite + a fixed reference Model-B stand-in +
+    the holdout dataset's clinician agreement -- never a live network
+    call). Tests MUST override this via
+    `app.dependency_overrides[api_routes.get_improve_score_fn]` with a
+    fake that actually varies with its input.
+    """
+    return build_benchmark_score_fn
