@@ -1,4 +1,4 @@
-# Secrets & credentials — NEVER commit (CLAUDE.md rule 2, spec §13)
+# Secrets & credentials — NEVER commit
 .env
 .env.*
 !.env.example
@@ -9,7 +9,7 @@ gcp-*.json
 credentials*.json
 *-key.json
 
-# Evidence caches / snapshots (large, reproducible) — spec §12A / §19
+# Evidence caches / snapshots (large, reproducible)
 evidence/cache/
 evidence/snapshots/
 *.snapshot
@@ -39,7 +39,18 @@ out/
 .idea/
 .vscode/
 
-# Local phase evidence is committed (spec §65) — do NOT ignore evidence/phase_*.txt
+# Devpost submission working folder — private copy-paste material, never published
+project submission/
+
+# Raw build/process docs — kept locally, not published to the public repo
+SPEC.md
+CLAUDE.md
+PLAN.md
+QUESTIONS.md
+RESEARCH.md
+.claude/
+
+# Local phase evidence is committed - do NOT ignore evidence/phase_*.txt
 
 # scripts/live_run/artifacts/ — run OUTPUT of the accelerated 4-round self-improving
 # live run (generated patients, round_results.json, improve_result.json, the
