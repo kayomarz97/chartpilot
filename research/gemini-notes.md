@@ -1,4 +1,4 @@
-# Gemini API / google-genai SDK — verified facts for doctor_helper
+# Gemini API / google-genai SDK: verified facts for doctor_helper
 
 Retrieved: 2026-08-20. All facts below were pulled from the LIVE official pages listed per
 section (raw `curl` + manual grep of the HTML, not just search-snippet paraphrase, except
@@ -38,16 +38,16 @@ Current models, exact API IDs (as used in `model=` param):
 | `gemini-3.5-flash` | GA (May 19, 2026) | "most intelligent model for sustained frontier performance on agentic and coding tasks" |
 | `gemini-3.5-flash-lite` | GA (July 21, 2026) | "low-latency, highly cost-effective subagent option" |
 | `gemini-3.1-flash-lite` | GA / Stable | |
-| `gemini-3.1-pro-preview` | Preview | used in official function-calling-with-tools example (`model="gemini-3.1-pro-preview"`) — **there is no GA "gemini-3.5-pro" or "gemini-3.6-pro" model ID as of 2026-08-20**; the Pro tier at 3.x is still preview-only (`gemini-3.1-pro-preview`, also saw `gemini-3-pro-preview`) |
+| `gemini-3.1-pro-preview` | Preview | used in official function-calling-with-tools example (`model="gemini-3.1-pro-preview"`): **there is no GA "gemini-3.5-pro" or "gemini-3.6-pro" model ID as of 2026-08-20**; the Pro tier at 3.x is still preview-only (`gemini-3.1-pro-preview`, also saw `gemini-3-pro-preview`) |
 | `gemini-3-flash-preview` | Preview | predecessor to 3.5-flash; changelog migration note: "Update model name: `gemini-3-flash-preview` → `gemini-3.5-flash`" |
 | `gemini-3-pro-preview`, `gemini-3-pro-image` | Preview | image-capable variants exist too (`gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`) |
 
-**Do not hardcode a model ID for anything long-lived** — Google explicitly deprecates preview
+**Do not hardcode a model ID for anything long-lived**: Google explicitly deprecates preview
 models with as little as 2 weeks' notice. For the hackathon, pin to `gemini-3.5-flash` or
 `gemini-3.7-flash` (both GA/Stable as of 2026-08-20) but discover/validate at startup via
 `client.models.list()` (below) and fail loudly if the configured ID is absent from the list.
 
-### Runtime model discovery — `client.models.list()`
+### Runtime model discovery: `client.models.list()`
 
 Source: `https://googleapis.github.io/python-genai/index.html`, section "List Base Models".
 
@@ -78,7 +78,7 @@ Source: `https://ai.google.dev/gemini-api/docs/quickstart`,
 `https://googleapis.github.io/python-genai/index.html`. Read 2026-08-20.
 
 **Package name:** `google-genai` (import path `from google import genai`). This is the
-official "Google Gen AI SDK" — same package serves both Gemini Developer API and the
+official "Google Gen AI SDK": same package serves both Gemini Developer API and the
 Gemini Enterprise Agent Platform (formerly "Vertex AI") backends; you select which backend
 via constructor args.
 
@@ -164,7 +164,7 @@ client = genai.Client(
 
 Source: `https://ai.google.dev/gemini-api/docs/structured-output`. Read 2026-08-20 (raw HTML
 grepped; verified zero occurrences of `response_schema`/`response_mime_type` anywhere on the
-current page — those are the OLD `generate_content`-era param names and are **not** what the
+current page: those are the OLD `generate_content`-era param names and are **not** what the
 current docs show for the Interactions API path).
 
 **Current, documented shape (Interactions API):** `response_format` dict with keys
@@ -201,7 +201,7 @@ recipe = Recipe.model_validate_json(interaction.output_text)
 Union/discriminated types are supported (`Union[SpamDetails, NotSpamDetails]` example in
 docs). Streaming structured output is supported (`stream=True` + same `response_format`).
 Gemini 3 lets you combine Structured Outputs with built-in tools (Google Search, code
-execution, url_context) in the same call — shown with `model="gemini-3.1-pro-preview"` in
+execution, url_context) in the same call: shown with `model="gemini-3.1-pro-preview"` in
 the docs' own example (note: that example uses a **preview** Pro model, since no GA 3.5/3.6
 Pro model ID exists yet).
 
@@ -210,7 +210,7 @@ Pro model ID exists yet).
 Gemini 3.x models. If the codebase ends up needing structured output through
 `generate_content` (not `interactions.create`) specifically, re-verify against
 `googleapis.github.io/python-genai` reference docs for `GenerateContentConfig` before relying
-on memory of the old `response_schema=` kwarg — do not assume it is unchanged.
+on memory of the old `response_schema=` kwarg. Do not assume it is unchanged.
 
 ---
 
@@ -260,7 +260,7 @@ print(final_interaction.output_text)
 Tool-choice control: `generation_config={"tool_choice": "auto" | "any" | "none"}`.
 Parallel function calling: model can emit multiple `function_call` steps in one turn.
 
-**Thought signatures — exact requirements (quoted from the Thinking guide):**
+**Thought signatures: exact requirements (quoted from the Thinking guide):**
 
 > "Thought signatures are encrypted representations of the model's internal reasoning. They
 > are required to maintain reasoning continuity across multi-turn interactions."
@@ -274,19 +274,19 @@ Parallel function calling: model can emit multiple `function_call` steps in one 
     model."*
   - *"You should **NOT** remove or modify thought blocks from the history, as they contain
     the signatures required for the model to continue its reasoning."*
-  - When switching models mid-session, still resend the previous model's thought blocks —
+  - When switching models mid-session, still resend the previous model's thought blocks:
     "the backend manages compatibility."
   - Built-in tool steps (e.g. `google_search_call`/`google_search_result`) can carry their
     own signatures too and must also be resent in stateless mode.
 - Signature location differs by API: in `generateContent`, signatures are metadata attached
   to arbitrary parts (e.g. inside `functionCall` parts). In the Interactions API, signatures
-  live only on dedicated `thought` steps or built-in-tool steps — never on user input, model
+  live only on dedicated `thought` steps or built-in-tool steps, never on user input, model
   text output, or plain `function_call` steps.
 - **SDK auto-handling:** *"Gemini 3 series models use an internal 'thinking' process that
   improves function calling. The SDKs automatically handle thought signatures for you"* when
   you use the SDK's own chained-turn convenience pattern (append `interaction.steps` /
   `step.model_dump()` to a running history list and resend as `input` on the next call, as
-  shown in the docs' stateless-mode example) — i.e. the SDK does not silently strip
+  shown in the docs' stateless-mode example), i.e. the SDK does not silently strip
   signatures if you round-trip `step` objects as given, but it does not manage state for you
   across process restarts; **your application must persist and replay the full `steps`
   list** if you are not using `previous_interaction_id` server-side state.
@@ -297,7 +297,7 @@ Parallel function calling: model can emit multiple `function_call` steps in one 
 **Decision-relevant for a Cloud-Tasks-driven durable pipeline:** since Cloud Tasks workers are
 stateless between invocations, prefer **stateful mode** (`store: true` +
 `previous_interaction_id` persisted in your own app DB) so Google's servers hold the thought
-history — this avoids having to serialize/deserialize full `steps` arrays including opaque
+history: this avoids having to serialize/deserialize full `steps` arrays including opaque
 signature blobs in your own storage. If you must go stateless (e.g. to avoid any server-side
 retention), you must store and replay the entire `steps` array verbatim, including `thought`
 steps, and must not truncate/summarize them.
@@ -324,16 +324,16 @@ Also deprecated/changed alongside: raw numeric `thinking_budget` → replaced by
 `thinking_level` string enum (`minimal` | `low` | `medium` (default) | `high`), set via
 `generation_config={"thinking": {"thinking_level": "medium"}}`. Default effort changed from
 `high` → `medium` between 3.x versions; re-test prompt quality after upgrading model IDs.
-"Thought preservation is now on by default" for Gemini 3.x — reasoning context carries
+"Thought preservation is now on by default" for Gemini 3.x: reasoning context carries
 forward across turns automatically (increases token usage but improves performance).
 
 **Practical guidance for doctor_helper:** do not set `temperature`/`top_p`/`top_k` on Gemini
-3.x calls at all (neither to force determinism nor to add variance) — Google's own guidance
+3.x calls at all (neither to force determinism nor to add variance), Google's own guidance
 says removing them entirely, not pinning `temperature=0`, is the recommended posture. If the
 existing TECHNICAL_DECISIONS.md "sampling-param gate" assumed `temperature=0` for
 determinism, that assumption should be revised: use fixed system instructions / schema
 constraints for determinism instead, and confirm this policy is scoped to the Gemini client
-only (a non-Gemini Model B such as Claude may legitimately still use temperature).
+only (a non-Gemini Model B such as another vendor's model may legitimately still use temperature).
 
 ---
 
@@ -342,7 +342,7 @@ only (a non-Gemini Model B such as Claude may legitimately still use temperature
 Source: `https://docs.cloud.google.com/gemini-enterprise-agent-platform/build/adk` (fetched
 2026-08-20, note: "Vertex AI Agent Builder" docs have also moved under the
 "Gemini Enterprise Agent Platform" branding) + general framework description corroborated by
-`developers.googleblog.com` ADK launch post (search-verified, not raw-fetched — treat framing
+`developers.googleblog.com` ADK launch post (search-verified, not raw-fetched, treat framing
 as directionally correct, verify exact API signatures separately if ADK is actually adopted).
 
 **Google ADK (Agent Development Kit):** An opinionated, higher-level Python (also
@@ -350,28 +350,28 @@ TS/Go/Java) framework for building and orchestrating *multi-agent* systems: it s
 classes, workflow primitives (`SequentialAgent`, `ParallelAgent`, `LoopAgent` for
 deterministic pipelines, or LLM-router agents for dynamic routing), a tool ecosystem, and
 first-class deploy targets (Agent Engine / Cloud Run / GKE via `adk deploy`). It is the
-heavier choice — you adopt ADK's own agent/session/state abstractions, not just an SDK call.
+heavier choice: you adopt ADK's own agent/session/state abstractions, not just an SDK call.
 Best fit when you want Google's opinions about how agents coordinate and you're fine ceding
 orchestration control to its runtime.
 
 **google-genai (GenAI SDK):** A thin, unopinionated client library for calling Gemini models
-(chat, tools, structured output, streaming) with no imposed orchestration model — you own all
+(chat, tools, structured output, streaming) with no imposed orchestration model: you own all
 state, retries, and pipeline logic yourself (e.g. with Cloud Tasks + your own app DB, as
 doctor_helper's architecture already does). This is the lighter-weight choice for "we own
 orchestration."
 
 **For a small durable pipeline where the app owns orchestration via Cloud Tasks + app
-state:** `google-genai` alone is the better technical fit — adopting ADK on top would mean
+state:** `google-genai` alone is the better technical fit: adopting ADK on top would mean
 fighting or duplicating ADK's own state/session model against your Cloud Tasks state machine.
 
 **Does using `google-genai` alone satisfy the hackathon's "Google Agent Framework" bullet?**
 The hackathon rule lists four qualifying options: *"Google ADK, GenAI SDK, Antigravity SDK,
 or GenKit."* **"GenAI SDK" is listed as its own qualifying option, separate from ADK**, and
 `google-genai` is literally and officially named "Google Gen AI SDK" per its own docs title
-(`googleapis.github.io/python-genai` → "Google Gen AI SDK documentation"). So yes — using
+(`googleapis.github.io/python-genai` → "Google Gen AI SDK documentation"). So yes: using
 `google-genai` for model calls, tool calling, and structured output satisfies the "GenAI SDK"
 branch of the requirement on its own; ADK is not required in addition. (This is a
-requirements-interpretation, not a Google doc fact — flagging it as such. If the hackathon
+requirements-interpretation, not a Google doc fact, flagging it as such. If the hackathon
 rules committee has their own stricter interpretation, that overrides this reading.)
 
 ---
@@ -391,7 +391,7 @@ RPM/TPM/RPD numbers for the Free/Tier-1/etc. tiers.** It now says:
 What the page *does* state concretely:
 - **Usage tiers:** Free (active project or free trial, no billing cap) → Tier 1 (billing
   linked, $250 cap) → Tier 2 (after $100 cumulative spend + 3 days, $2,000 cap) → Tier 3
-  (after $1,000 spend + 30 days, $20,000–$100,000+ cap). Tiers upgrade automatically as
+  (after $1,000 spend + 30 days, $20,000-$100,000+ cap). Tiers upgrade automatically as
   cumulative Google Cloud billing-account spend increases.
 - **Spend-based rate limit** (rolling 10-minute window, separate from RPM/TPM): Free = N/A,
   Tier 1 = $10 / 10 min, Tier 2 = $50 / 10 min, Tier 3 = $200 / 10 min. Exceeding it returns
@@ -406,11 +406,11 @@ What the page *does* state concretely:
   10,000,000).
 
 **Gap flagged:** I could not find a live official page giving exact numeric RPM/TPM/RPD for
-the Free tier on `gemini-3.5-flash` etc. — Google appears to have moved this to a
+the Free tier on `gemini-3.5-flash` etc., Google appears to have moved this to a
 per-project, dynamically-computed dashboard (AI Studio "rate-limit" page) rather than a
 static docs table, likely because it now varies by account signals. **Do not hardcode
 specific Free-tier RPM/TPM numbers from third-party blogs (aifreeapi.com, aipromptshub.co,
-etc.) into code or planning docs — they are unverified and not from ai.google.dev.** For the
+etc.) into code or planning docs; they are unverified and not from ai.google.dev.** For the
 hackathon, check `https://aistudio.google.com/rate-limit` directly with the actual project's
 API key before sizing concurrency/backoff logic, and build retry/backoff around HTTP 429
 regardless of the exact number.
@@ -431,4 +431,4 @@ regardless of the exact number.
 - https://googleapis.github.io/python-genai/index.html (Google Gen AI SDK reference/guide)
 - https://pypi.org/pypi/google-genai/json (version pin check)
 - https://docs.cloud.google.com/gemini-enterprise-agent-platform/build/adk (ADK, current
-  branding — formerly under Vertex AI docs)
+  branding, formerly under Vertex AI docs)

@@ -1,4 +1,4 @@
-# `tests/live/` — the live-integration layer (spec §23)
+# `tests/live/`: the live-integration layer (spec §23)
 
 Everything else under `backend/tests/` is hermetic: no real network calls,
 Gemini responses come from `FakeGeminiClient` cassettes
@@ -16,9 +16,9 @@ patient-shaped demo data, over the network.
 - **Not deterministic.** Model output varies run to run, so these tests only
   assert robust, structural properties (the run completes with no error,
   reaches the terminal `PERSISTED` stage, and produces at least one
-  finding) — never exact model wording or an exact finding count.
+  finding), never exact model wording or an exact finding count.
 - **Needs a real `GEMINI_API_KEY`.** In CI, and on any machine without a key
-  set, the test module skips itself cleanly (`allow_module_level=True`) —
+  set, the test module skips itself cleanly (`allow_module_level=True`);
   it never fails for lack of a key.
 
 Two independent guards keep it out of the default suite:
@@ -36,11 +36,11 @@ cd backend
 GEMINI_API_KEY=<your real key> uv run pytest tests/live -m live
 ```
 
-(If `GEMINI_API_KEY` is already exported in your shell — e.g. from
-`backend/.env` via your own shell profile — you can drop the inline
+(If `GEMINI_API_KEY` is already exported in your shell, e.g. from
+`backend/.env` via your own shell profile, you can drop the inline
 assignment.) The `-m live` on the command line overrides the `-m "not live"`
 baked into `addopts`, and each test's own `enable_socket` marker re-permits
-sockets for that test only — the rest of the suite stays blocked. This exact
+sockets for that test only; the rest of the suite stays blocked. This exact
 command was verified to (a) collect and run the test when a key is present
 and (b) skip cleanly with no failure when it is not.
 

@@ -1,9 +1,9 @@
-# ChartPilot — Evaluation
+# ChartPilot: Evaluation
 
 This document reports the project's honest measurement results: real latency
 against the live pipeline, the §22 Model B corruption-suite catch rate, and
 what the demo patients are (and are not) evidence of. Phase 17
-(`.claude/plans/`, see journal.md) built the instrumentation and the
+(see journal.md) built the instrumentation and the
 hermetic/deterministic harnesses; the two LIVE measurement runs below are
 executed separately (they cost real Gemini API tokens and are excluded from
 `make check` by design) and their numbers are filled in once that live run
@@ -11,12 +11,12 @@ has actually happened.
 
 ## Single-patient latency
 
-Measured by `scripts/measure_latency.py` (LIVE — real `GeminiInteractionsClient`
+Measured by `scripts/measure_latency.py` (LIVE: real `GeminiInteractionsClient`
 calls, Model A `gemini-3.7-flash` + Model B `gemini-3.5-flash`) against demo
 Patient A, run N times end to end through `app.pipeline.runner.run_patient`
 with per-stage timing (`stage_timings`, spec §50).
 
-**LIVE RUNS — 2026-08-20/21.** Two measurement sessions gave very different results; BOTH are reported
+**LIVE RUNS: 2026-08-20/21.** Two measurement sessions gave very different results; BOTH are reported
 honestly (§50: never fake live results).
 
 Per-stage (clean session, n=3, 2026-08-21):
@@ -34,18 +34,18 @@ Per-stage (clean session, n=3, 2026-08-21):
 | persisted | 0.00 | 0.00 |
 | **TOTAL** | **189.23** | **193.18** |
 
-- **Session A (2026-08-20, n=2 usable):** total **43.6 s** and **57.7 s** — both **≤ 90 s (MET)**. (A third run
-  crashed on a transient Gemini `500 "high demand"` — the failure that prompted the retry/fail-closed fix.)
-- **Session B (2026-08-21, n=3):** totals **189.2 / 193.2 / 124.8 s** — p50 **189.2 s**, **all > 90 s (NOT MET)**.
+- **Session A (2026-08-20, n=2 usable):** total **43.6 s** and **57.7 s**, both **≤ 90 s (MET)**. (A third run
+  crashed on a transient Gemini `500 "high demand"`: the failure that prompted the retry/fail-closed fix.)
+- **Session B (2026-08-21, n=3):** totals **189.2 / 193.2 / 124.8 s**: p50 **189.2 s**, **all > 90 s (NOT MET)**.
 
 **Target:** total p50 ≤ 90 s. **Result: NOT reliably met.** The entire budget is dominated by the **Model A
-`ai_reasoning` call (gemini-3.7-flash)**, which swung from a few seconds (Session A) to ~150 s (Session B) —
+`ai_reasoning` call (gemini-3.7-flash)**, which swung from a few seconds (Session A) to ~150 s (Session B):
 Gemini-3.7-flash serving latency varies enormously with server-side load (the same load that produced the
 transient 500). Every deterministic stage is effectively free (~0 s); Model B adds a stable ~40 s.
 
-**Optimization levers (recorded, not yet applied — would need live re-measurement):**
+**Optimization levers (recorded, not yet applied, would need live re-measurement):**
 1. Set `thinking_level: "low"` / `"minimal"` on the Model A call (Gemini 3.x defaults to `medium` thinking;
-   `research/gemini-notes.md §5`) — likely the single biggest win.
+   `research/gemini-notes.md §5`), likely the single biggest win.
 2. Use a faster Model A (`gemini-3.5-flash-lite`) and/or trim the Model A input (evidence regions are passed
    verbatim; they can be bounded).
 3. **For the judged demo, the precomputed multi-patient run (`tests/fixtures/demo/precomputed_run.json`)
@@ -57,19 +57,19 @@ path is shown as a real (variable-latency) capability, not a guaranteed-fast one
 
 ## Model B corruption suite (§22)
 
-Measured by `scripts/measure_model_b_live.py` (LIVE — real
+Measured by `scripts/measure_model_b_live.py` (LIVE: real
 `GeminiInteractionsClient`, `gemini-3.5-flash`) against the §22 Set D / Set M
 corruption suite (`app.review.corruption`), built from demo Patient A's own
 chart + claim plus a small control set of other demo patients' genuinely
 correct, uncorrupted claims (B, D, E).
 
-**LIVE RUN — 2026-08-20** (`scripts/measure_model_b_live.py`, Model B `gemini-3.5-flash`).
+**LIVE RUN: 2026-08-20** (`scripts/measure_model_b_live.py`, Model B `gemini-3.5-flash`).
 
 | Metric | Result | Release-gate requirement (§22.3) | Pass? |
 |---|---|---|---|
 | Set D blocked pre-Model-B | **7/7 (100%)** | 100% (7/7) | ✅ |
 | Set M catch rate | **8/8 (100%)** | ≥ 80% | ✅ |
-| Set M false-accept | **0** | (informational — corruptions not caught) | — |
+| Set M false-accept | **0** | (informational, corruptions not caught) | - |
 | Control false-reject rate | **3/4 (75%)** | ≤ 20% | ❌ |
 | **§22.3 release threshold met** | **False** | all three above must pass | ❌ |
 
@@ -81,27 +81,27 @@ caught 100% of the model-only semantic corruptions with zero false-accepts),
 were wrongly rejected)**, far above the ≤20% ceiling.
 
 **Interpretation (honest):** Model B, primed to *falsify* claims (§21.3), is
-over-aggressive — excellent sensitivity to corruption, poor specificity on
+over-aggressive: excellent sensitivity to corruption, poor specificity on
 correct claims. This is precisely the failure §22.3 exists to catch. Per the
 spec, the product therefore does **not** display an "Independent review ✓
 passed" badge; Model B's verdicts are shown as **ADVISORY** context only, and
-the deterministic gates (§16–18) remain the authoritative safety layer.
+the deterministic gates (§16-18) remain the authoritative safety layer.
 
 **Not tuned to fit:** per §22.3, we did NOT re-tune Model B's prompt against
 this same suite and re-report a flattering number. The measured 75%
 false-reject stands as the honest result. A real fix (a less trigger-happy
 reviewer prompt, or a two-of-three reviewer vote) would need to be measured
-against a *separate, independently-authored* control set — which does not yet
+against a *separate, independently-authored* control set, which does not yet
 exist (see §52 caveat below). Re-measure before ever claiming the badge.
 
 ## Regression vs evaluation (§52)
 
-**The 5 hand-authored demo patients (A–E) are a SAFETY/REGRESSION suite, not
+**The 5 hand-authored demo patients (A-E) are a SAFETY/REGRESSION suite, not
 a statistically valid benchmark.** They exist to pin down specific,
 deliberately-designed clinical scenarios (an unresolved high-severity
 potassium finding, a resolved/normal case with no false alarm, an ambiguous
 unit routed to human review, two general completion cases) and catch
-regressions in the pipeline's handling of each — not to estimate any
+regressions in the pipeline's handling of each, not to estimate any
 real-world accuracy, sensitivity, specificity, or catch rate across the
 actual distribution of patients, charts, or claims a production deployment
 would see. There is **no independent holdout set**: every patient/cassette
@@ -132,16 +132,16 @@ and a manual greyscale/color-contrast visual pass.** Automated axe coverage
 catches a meaningful subset of accessibility issues (missing labels, role/
 name/value problems, contrast ratios it can compute) but does not verify
 actual keyboard operability end to end or how the UI reads without color as
-a channel — both require a human pass before this can be called complete
+a channel, both require a human pass before this can be called complete
 against §57A.
 
-## Self-improving loop (Phases A–C, 2026-08-22)
+## Self-improving loop (Phases A-C, 2026-08-22)
 
 The self-improving loop (TD-014) is proven by the **hermetic, network-blocked**
-test suite, not yet by a live measurement — stated honestly so no number here
+test suite, not yet by a live measurement, stated honestly so no number here
 is mistaken for a live result.
 
-**Inner loop — citation repair (Phase A).** Deterministic unit tests
+**Inner loop: citation repair (Phase A).** Deterministic unit tests
 (`tests/unit/test_pipeline_revise_loop.py`, `test_agent_revise.py`) prove the
 mechanism: a claim with an unverifiable span is **repaired to VERIFIED** within
 budget and the corrected span is what gets persisted; budget exhaustion leaves
@@ -149,7 +149,7 @@ the claim NOT verified (**fail-closed**, never a silent pass); the safety guard
 **rejects** any revision that changes the clinical statement or adds an evidence
 source; `max_revise_iterations=0` is byte-identical to the pre-loop pipeline.
 **Not yet measured: a live citation-repair RATE** (what fraction of real
-Model-A span failures the loop fixes end to end) — that needs a live run and is
+Model-A span failures the loop fixes end to end), that needs a live run and is
 deliberately not estimated here.
 
 **Outer loop (Phase C).** Tests (`tests/unit/test_improve_*.py`, 41 cases)
@@ -161,13 +161,13 @@ held-out eval); acceptance requires strict improvement with **zero regression on
 every axis**; the cycle is **fail-closed** (any error → rejected report, active
 artifact unchanged, never raises).
 
-### Live 4-round physician-in-the-loop run (2026-08-23) — MEASURED
+### Live 4-round physician-in-the-loop run (2026-08-23): MEASURED
 
 The outer loop was then run for real: the LLM-backed proposer (`app.improve.
 proposer_llm.LlmProposer`, real Gemini) + the live evaluator (`app.improve.
 evaluator_live`, which re-runs candidate prompts through the real pipeline).
 4 rounds, 8 **new** hand-varied synthetic patients each (32 total; potassium
-3.5–7.0, ACE-inhibitor present/absent, varying creatinine — all within the demo
+3.5-7.0, ACE-inhibitor present/absent, varying creatinine, all within the demo
 evidence snapshot's vocabulary so citations stay verifiable). Each round: the
 physician (author) reviewed the substantive findings in-terminal and marked
 CONFIRM / OVERRIDE / CORRECT; the loop proposed a Model-A prompt revision and
@@ -188,10 +188,10 @@ regression). Model A/B = `gemini-3.7-flash` / `gemini-3.5-flash`.
   showed a real strict improvement, so every round promoted. The R4 jump
   (42.9%→80.0%) is the largest.
 - The **Model-B-support-on-fresh-patients** column is a trend on *different* new
-  patients each round, so it is noisy (round 2 dipped on harder cases) — but the
+  patients each round, so it is noisy (round 2 dipped on harder cases), but the
   net move from the default prompt (round 1, 50%) to the round-3 prompt (round 4,
   **79%**) is a genuine +29 pp gain in finding quality.
-- **Citation verified-span held at 100% throughout** — the loop improved finding
+- **Citation verified-span held at 100% throughout**: the loop improved finding
   quality without ever trading away quoting accuracy (the deterministic guard did
   its job).
 - The loop learned mainly from the physician's **repeated overrides of generic
@@ -199,15 +199,29 @@ regression). Model A/B = `gemini-3.7-flash` / `gemini-3.5-flash`.
   tightened grounding for guideline/inference/suggestion claims (see each
   round's `improve_result.json` rationale).
 - It **never** proposed a change to a clinical rule, the validity math, or the
-  fail-closed gate — `assert_target_allowed` forbids it structurally.
+  fail-closed gate: `assert_target_allowed` forbids it structurally.
 
 **Limits (do not overstate this):** one clinical domain (hyperkalemia +
 ACE-inhibitor, the single shipped rule), single vendor, synthetic patients,
 small per-round benchmarks (4 patients → coarse 1/N rates), no independent
 holdout, and the loop did **not** fully eliminate the normal-K guideline
-boilerplate (the physician still overrode 2–3 findings every round, incl.
+boilerplate (the physician still overrode 2-3 findings every round, incl.
 round 4). It is a credible demonstration that a tier-guarded, benchmark-gated
-self-improving loop can raise finding quality on real physician feedback — not
+self-improving loop can raise finding quality on real physician feedback, not
 a validated clinical result. Run artifacts (per-round results, labels, promoted
 prompts, `trajectory.json`) live under `scripts/live_run/artifacts/`
 (git-ignored); the promoted prompts are versioned in the promotion ledger.
+
+**Honest note on the run:** this four-round live run was interrupted once.
+After round 1, the project's Gemini monthly spend cap tripped and returned a
+hard error, which paused the run. The cap was raised and the remaining rounds
+then completed. All four rounds ran on live Gemini and promoted a prompt each
+round. The pause was a billing limit, not a failure of the pipeline.
+
+### Loop timing (offline path)
+
+With the fake model client and no network, each round completes its full
+propose, evaluate, and canary cycle in about 0.4 seconds, and all four rounds
+in about 1.6 seconds. This measures the loop's own orchestration overhead, not
+Gemini latency, so it is not comparable to the single-patient live-latency
+figures above. It does confirm the loop machinery itself is not a bottleneck.

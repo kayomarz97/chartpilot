@@ -18,10 +18,10 @@ hand-authored content is meant to be consistent with:
 }
 ```
 
-`_meta` is documentation only — the loaders (`_model_a_client`/`_model_b_client`
+`_meta` is documentation only. The loaders (`_model_a_client`/`_model_b_client`
 helpers in the tests above) read only the `model_a`/`model_b` keys and
 ignore `_meta` entirely, so it never affects test behavior.
 
 For an actual live recording against the real API (spec §23), see
-`tests/live/` — a separate, explicitly-marked, non-hermetic layer excluded
+`tests/live/`, a separate, explicitly-marked, non-hermetic layer excluded
 from `make check`.

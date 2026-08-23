@@ -11,7 +11,7 @@ Every file here is meant to be read and signed off by a clinician before it
 is ever cited to an end user. The loader enforces a hard cap of 15 files
 (`MAX_GUIDELINE_RECORDS` in `guideline_pack.py`) specifically so the pack
 never grows past what a human can plausibly review. This is a deliberate
-constraint, not a temporary limitation — do not raise the cap to make room
+constraint, not a temporary limitation. Do not raise the cap to make room
 for un-reviewed content.
 
 ## File shape
