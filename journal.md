@@ -50,6 +50,15 @@ SECURE LIVE-DATA ARCHITECTURE (changed from the naive plan mid-integration): bac
   project has exceeded its monthly spending cap" returns even after 6 retries/330s. **Rounds 2–4 are BLOCKED
   until the user raises the cap again at https://ai.studio/spend (or it resets monthly).** Round 1 completed
   and its result is saved (see below); the promoted r1 prompt is in the local file ledger.
+  UPDATE (2026-08-23): user raised the cap to ₹800 (~₹600 headroom); the full 4-round run then COMPLETED.
+  RESULT: 4 rounds × 8 new synthetic patients, physician-in-the-loop labels in-terminal; the loop promoted a
+  Model-A prompt EVERY round (default→r1→r2→r3→r4), each earned on a held-out worst-patients benchmark
+  (strict improvement + zero citation-quality regression). Held-out review-survival per round:
+  50→55.6, 28.6→33.3, 33.3→40, 42.9→80%. Model-B support on each round's fresh patients: 50%(default)→79%(r3);
+  citation verified-span 100% throughout. README "Measured results" + EVALUATION.md updated with the REAL
+  numbers + honest limits (single domain, small benchmarks, boilerplate not fully eliminated). Also hardened:
+  Gemini client retry 6×10s (rides transient 429s); benchmark selection = worst-headroom patients; labels are
+  patient-scoped (model claim_ids collide across patients). Run artifacts under scripts/live_run/artifacts/.
   Earlier (2026-08-22) note, for history: (History: the key had hit its cap → 429 "project has exceeded its monthly
   spending cap"; it was OUR chartpilot project's cap, not Iatronix, confirmed with the ambient GOOGLE_API_KEY
   unset. While capped, runs/demo returned 5 FAILED presentations and the UI showed its hardened demo-data

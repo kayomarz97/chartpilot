@@ -255,6 +255,32 @@ output for each), `journal.md` (the narrative + mistakes ledger), `TECHNICAL_DEC
   NOT met ⇒ the "independent review ✓" badge is WITHHELD; Model B verdicts show as ADVISORY only.** The
   deterministic gates remain the authoritative safety layer. We deliberately did **not** re-tune Model B
   against its own suite to inflate the number.
+- **Self-improving loop — live 4-round physician-in-the-loop run (2026-08-23).** 4 rounds × 8 **new**
+  synthetic patients each (32 total), all real Gemini. Every round the loop proposed a Model-A prompt
+  revision and **promoted it only after it beat the prior prompt on a held-out benchmark** (the patients the
+  prior prompt handled *worst*), requiring **strict improvement AND zero citation-quality regression**.
+  Result — a promotion every round (default → r1 → r2 → r3 → r4):
+
+  | Round | Prompt scored | Held-out **review-survival** (baseline → candidate) | Blinded **Model-B support** on that round's *fresh* patients | Citation verified-span |
+  |---|---|---|---|---|
+  | 1 | default → r1 | 50.0% → 55.6% | 50% (7/14) | 100% |
+  | 2 | r1 → r2 | 28.6% → 33.3% | 44% (7/16) | 100% |
+  | 3 | r2 → r3 | 33.3% → 40.0% | 54% (7/13) | 100% |
+  | 4 | r3 → r4 | 42.9% → **80.0%** | **79% (11/14)** | 100% |
+
+  **What actually improved:** finding *quality* — the fraction of cited findings that survive both the
+  deterministic gate and the blinded Model B. On each round's fresh unseen patients the Model-B support rate
+  moved **50% (default prompt) → 79% (round-3 prompt)**, while the deterministic **citation verified-span rate
+  held at 100% throughout** (the loop never traded quoting accuracy for it). The loop learned chiefly from the
+  physician's repeated *overrides of generic guideline boilerplate on normal-potassium patients* — every
+  promoted prompt tightened grounding for guideline/inference claims. **It never touched a clinical rule, the
+  eGFR/validity math, or the fail-closed gate — those are structurally forbidden targets** (`app/improve`).
+  *Honest limits:* one clinical domain (hyperkalemia + ACE-inhibitor), single vendor, synthetic patients,
+  small per-round benchmarks (so rates are coarse and the cross-round trend is noisy — round 2 dipped on
+  harder patients), no independent holdout, and the loop did **not** fully eliminate the normal-K guideline
+  boilerplate (the physician still overrode 2–3 findings every round). This is *not* the same number as the
+  75% Model-B false-reject above — that control measurement stands unchanged; the loop improves a
+  complementary axis (Model-A finding quality), and we did not re-tune Model B against its own suite.
 - **Accessibility:** automated axe pass (0 serious/critical); manual keyboard + greyscale pass pending.
 
 ---

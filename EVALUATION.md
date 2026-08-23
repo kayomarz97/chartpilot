@@ -159,7 +159,55 @@ at proposal entry, on the returned candidate, and again before promotion); the
 train/holdout split is deterministic and disjoint (no self-tuning on the
 held-out eval); acceptance requires strict improvement with **zero regression on
 every axis**; the cycle is **fail-closed** (any error → rejected report, active
-artifact unchanged, never raises). **Not yet measured: a live improvement
-delta** — the default proposer is a marked no-op placeholder, so the stock loop
-always rejects; a real before/after metric requires the live LLM-backed proposer
-and accumulated clinician labels, which are future work.
+artifact unchanged, never raises).
+
+### Live 4-round physician-in-the-loop run (2026-08-23) — MEASURED
+
+The outer loop was then run for real: the LLM-backed proposer (`app.improve.
+proposer_llm.LlmProposer`, real Gemini) + the live evaluator (`app.improve.
+evaluator_live`, which re-runs candidate prompts through the real pipeline).
+4 rounds, 8 **new** hand-varied synthetic patients each (32 total; potassium
+3.5–7.0, ACE-inhibitor present/absent, varying creatinine — all within the demo
+evidence snapshot's vocabulary so citations stay verifiable). Each round: the
+physician (author) reviewed the substantive findings in-terminal and marked
+CONFIRM / OVERRIDE / CORRECT; the loop proposed a Model-A prompt revision and
+promoted it only if it beat the prior prompt on a **held-out benchmark of the
+patients that prompt handled worst** (strict improvement + zero citation-quality
+regression). Model A/B = `gemini-3.7-flash` / `gemini-3.5-flash`.
+
+| Round | Prompt | Held-out review-survival (baseline→candidate) | Model-B support on fresh patients | Citation verified-span | Clinician CONFIRM | Promoted |
+|---|---|---|---|---|---|---|
+| 1 | default→r1 | 50.0% → 55.6% | 50% (7/14) | 100% | 4/7 | ✓ r1 |
+| 2 | r1→r2 | 28.6% → 33.3% | 44% (7/16) | 100% | 4/9 | ✓ r2 |
+| 3 | r2→r3 | 33.3% → 40.0% | 54% (7/13) | 100% | 5/7 | ✓ r3 |
+| 4 | r3→r4 | 42.9% → 80.0% | 79% (11/14) | 100% | 6/10 | ✓ r4 |
+
+**Read this honestly:**
+- The **held-out review-survival** column is the rigorous, controlled A/B: same
+  patients, parent prompt vs candidate, scored by the live evaluator. Every round
+  showed a real strict improvement, so every round promoted. The R4 jump
+  (42.9%→80.0%) is the largest.
+- The **Model-B-support-on-fresh-patients** column is a trend on *different* new
+  patients each round, so it is noisy (round 2 dipped on harder cases) — but the
+  net move from the default prompt (round 1, 50%) to the round-3 prompt (round 4,
+  **79%**) is a genuine +29 pp gain in finding quality.
+- **Citation verified-span held at 100% throughout** — the loop improved finding
+  quality without ever trading away quoting accuracy (the deterministic guard did
+  its job).
+- The loop learned mainly from the physician's **repeated overrides of generic
+  guideline boilerplate on normal-potassium patients**; each promoted prompt
+  tightened grounding for guideline/inference/suggestion claims (see each
+  round's `improve_result.json` rationale).
+- It **never** proposed a change to a clinical rule, the validity math, or the
+  fail-closed gate — `assert_target_allowed` forbids it structurally.
+
+**Limits (do not overstate this):** one clinical domain (hyperkalemia +
+ACE-inhibitor, the single shipped rule), single vendor, synthetic patients,
+small per-round benchmarks (4 patients → coarse 1/N rates), no independent
+holdout, and the loop did **not** fully eliminate the normal-K guideline
+boilerplate (the physician still overrode 2–3 findings every round, incl.
+round 4). It is a credible demonstration that a tier-guarded, benchmark-gated
+self-improving loop can raise finding quality on real physician feedback — not
+a validated clinical result. Run artifacts (per-round results, labels, promoted
+prompts, `trajectory.json`) live under `scripts/live_run/artifacts/`
+(git-ignored); the promoted prompts are versioned in the promotion ledger.
