@@ -1,0 +1,41 @@
+name: CI
+
+# Runs the exact offline verification gate used in development: `make check`
+# (ruff format + ruff check + mypy + a network-blocked pytest suite + a secret
+# scanner + a no-sampling-params gate). The suite is hermetic — no network, no
+# cloud, no Gemini key — so it runs deterministically on every push and PR.
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: make check (offline gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv (with Python 3.11)
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sync backend dependencies (locked)
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Run make check
+        run: make check
+
+      - name: Upload gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-evidence
+          path: evidence/phase_*.txt
+          if-no-files-found: ignore
