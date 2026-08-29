@@ -1,7 +1,7 @@
 # ChartPilot: Devpost Submission (copy-paste ready)
 
-> The live-demo URL is filled in below. One placeholder remains: `⟨VIDEO_URL⟩`, once you record the video.
-> Everything else is ready to paste into Devpost.
+> The live-demo URL and the demo-video URL are both filled in below. Everything here is ready to paste
+> into Devpost.
 
 ---
 
@@ -57,7 +57,7 @@ ChartPilot autonomously prepares a **pre-visit safety brief** from FHIR R4 data:
   invoker identity that may only *call* the service).
 - **Engineering rigor:** a 20-phase build protocol with machine-checkable gates: every phase ends with a
   green `make check` (ruff + mypy strict + a network-blocked pytest suite + a secret scanner + a
-  no-sampling-params gate) recorded to `evidence/phase_NN.txt` and an annotated git tag. 318 tests.
+  no-sampling-params gate) recorded to `evidence/phase_NN.txt` and an annotated git tag. 452 tests.
 
 ## Challenges we ran into
 - **Making "independent review" real, not theater.** Model B is prompted to *falsify* and is blinded to
@@ -91,7 +91,7 @@ reviewer measured against an independently-authored control set, and a live FHIR
 ## Links (paste into Devpost)
 - **Live demo (frontend):** https://chartpilot-frontend-zkhsg5lcca-el.a.run.app
 - **Source code:** https://github.com/kayomarz97/chartpilot   ← *must be made PUBLIC or shared with judges (see checklist)*
-- **Demo video:** ⟨VIDEO_URL⟩
+- **Demo video:** https://youtu.be/wKAX3P97Ye0
 - **Backend API (private, OIDC-only, not publicly visitable by design):** https://chartpilot-api-zkhsg5lcca-el.a.run.app
 
 ---
@@ -114,14 +114,10 @@ reviewer measured against an independently-authored control set, and a live FHIR
 ---
 
 ## FINAL CHECKLIST: what only you can do
-1. [ ] **Make the GitHub repo visible to judges**: either make `kayomarz97/chartpilot` **public**, or add
-       the judges/organizers as collaborators. A private repo the judges can't open = an incomplete submission.
-       Public: `gh repo edit kayomarz97/chartpilot --visibility public` (confirm no secrets first, we've
-       verified `.env` is gitignored and untracked).
+1. [x] **GitHub repo is public:** `https://github.com/kayomarz97/chartpilot` is public (verified — judges can
+       open it). History scanned: no secret was ever committed; `.env` is gitignored and untracked.
 2. [x] **Live-demo URL filled:** `https://chartpilot-frontend-zkhsg5lcca-el.a.run.app` (paste into the Devpost live-demo field).
-3. [ ] **Record the ~3-4 min demo video** (walk the dashboard → open a flagged patient → open the evidence
-       drawer → show a finding's citation + the Model-B verdict → mention the fail-closed gate). Upload
-       (YouTube/Vimeo, public/unlisted) and paste as `⟨VIDEO_URL⟩`.
+3. [x] **Demo video recorded & linked:** `https://youtu.be/wKAX3P97Ye0` (also embedded in `README.md`).
 4. [ ] **Rotate the Gemini API key** (it was shared in plain text during setup). New key in Google AI Studio,
        then update Secret Manager:
        `gcloud secrets versions add gemini-api-key --project=chartpilot-agentic --data-file=-`

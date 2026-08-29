@@ -1,13 +1,79 @@
-# ChartPilot: Pre-Clinic Chart-Prep Agent
+# ChartPilot — Pre-Clinic Chart-Prep Agent
+
+<p align="center">
+  <em>The night before clinic, ChartPilot reads the whole chart and prepares a one-page safety brief —<br/>
+  where deterministic code owns every fact, a second AI tries to prove each finding wrong, and the gate fails closed.</em>
+</p>
+
+<p align="center">
+  <a href="https://chartpilot-frontend-zkhsg5lcca-el.a.run.app"><b>▶ Live demo</b></a> &nbsp;·&nbsp;
+  <a href="https://youtu.be/wKAX3P97Ye0"><b>🎬 Watch the 4-min video</b></a> &nbsp;·&nbsp;
+  <a href="https://github.com/kayomarz97/chartpilot"><b>💻 Source</b></a>
+</p>
+
+<p align="center">
+  <img alt="Synthetic data only" src="https://img.shields.io/badge/data-synthetic%20only-informational">
+  <img alt="Not a medical device" src="https://img.shields.io/badge/status-not%20a%20medical%20device-critical">
+  <img alt="Fails closed" src="https://img.shields.io/badge/safety-fails%20closed-success">
+  <img alt="Backend Python + FastAPI" src="https://img.shields.io/badge/backend-Python%203.11%20%C2%B7%20FastAPI-3776AB">
+  <img alt="Frontend Next.js" src="https://img.shields.io/badge/frontend-Next.js%20%C2%B7%20TypeScript-000000">
+  <img alt="Deployed on Google Cloud Run" src="https://img.shields.io/badge/deployed-Google%20Cloud%20Run-4285F4">
+  <a href="https://github.com/kayomarz97/chartpilot/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/kayomarz97/chartpilot/actions/workflows/ci.yml/badge.svg"></a>
+</p>
 
 > **⚠️ Synthetic data only. Not a medical device. Not clinically validated. Not for clinical use.**
 > ChartPilot is a hackathon prototype (All Things Agentic, Taskmaster track). It runs entirely on
 > hand-authored **synthetic** FHIR data and makes **no** claim of clinical validation, regulatory
 > approval, HIPAA compliance, or production readiness.
 
-**🔗 Live demo (public UI):** https://chartpilot-frontend-zkhsg5lcca-el.a.run.app
-**🔗 Backend API (private, OIDC-only by design):** https://chartpilot-api-zkhsg5lcca-el.a.run.app
-**🔗 Source:** https://github.com/kayomarz97/chartpilot · **Demo video:** _(add link)_
+---
+
+## 🧭 Judges — start here
+
+**In one line:** an autonomous agent that, the night before clinic, reads a patient's *entire* FHIR
+record and produces a one-page safety brief — a full nightly **workflow**, not a chatbot.
+
+This project is scored on three axes; here is exactly where each one lives in the repo:
+
+| Judging criterion | Where to look in this repo |
+|---|---|
+| **Innovation & Operational Utility — 40%** <br/>_autonomous, high-value action_ | [What it does](#30-second-version-plain-language) · [Why this should win](#-why-this-should-win-mapped-to-the-judging-criteria) — a self-driving nightly pipeline that fetches, computes, retrieves evidence, reasons, self-checks with a second model, and persists, then hands a ranked one-page brief to the clinician. |
+| **Architectural Discipline & Tech Stack — 30%** <br/>_decoupling · credential security · failure handling_ | [How it works](#how-it-works) · [Safety design](#safety-design-why-you-can-trust-a-finding) · [The deployed system](#the-deployed-system-the-backend-made-visible) — deterministic layer owns every fact, **fails closed**, least-privilege service accounts, secrets in Secret Manager, durable idempotent orchestration. |
+| **Demo & Production Readiness — 30%** <br/>_video · docs · diagram · reproducible setup · GCP proof_ | [4-min video](#-watch-it-in-4-minutes) · [Live demo ↗](https://chartpilot-frontend-zkhsg5lcca-el.a.run.app) · [See it in action](#-see-it-in-action) · [Deployed on Google Cloud — the proof](#-deployed-on-google-cloud--the-proof) · [Run it in 60 seconds](#-run-it-in-60-seconds) |
+
+### ⚡ Run it in 60 seconds
+
+The full verification gate is **hermetic** — no cloud, no network, no API key:
+
+```bash
+git clone https://github.com/kayomarz97/chartpilot && cd chartpilot
+cd backend && uv sync && cd ..          # install backend deps (Python 3.11 + uv)
+make check                              # ruff + mypy(strict) + 452 network-blocked tests + secret scan
+```
+
+Want the live UI instead? It's already deployed — just open the
+**[live demo ↗](https://chartpilot-frontend-zkhsg5lcca-el.a.run.app)**. Full run/deploy details in
+[Running it](#running-it).
+
+---
+
+<p align="center">
+  <a href="docs/images/diagram-doctor-view.png">
+    <img alt="ChartPilot from a doctor's side: reads the whole record, ranks what matters onto one page, shows the source for every flag, and leaves the judgement to you." src="docs/images/diagram-doctor-view.png" width="100%">
+  </a>
+</p>
+
+---
+
+## 🎬 Watch it in ~4 minutes
+
+<p align="center">
+  <a href="https://youtu.be/wKAX3P97Ye0">
+    <img alt="ChartPilot demo video — click to watch on YouTube" src="https://img.youtube.com/vi/wKAX3P97Ye0/maxresdefault.jpg" width="70%">
+  </a>
+  <br/>
+  <a href="https://youtu.be/wKAX3P97Ye0"><b>▶ ChartPilot — full walkthrough (YouTube)</b></a>
+</p>
 
 ---
 
@@ -36,25 +102,37 @@ decision-maker.**
 
 ---
 
-## 🏆 Why this should win (highlights)
+## 🏆 Why this should win (mapped to the judging criteria)
 
-1. **It is genuinely agentic *and* genuinely safe.** The agent autonomously fetches, computes, retrieves
-   evidence, reasons, self-checks with a second model, and persists, but safety comes from deterministic
-   guarantees, not from trusting the model. This is the hard version of the problem, done honestly.
-2. **Adversarial self-verification that we actually measured, and reported honestly.** A blinded Model B
-   tries to *falsify* every claim. We measured it against a corruption suite, found it **over-aggressive**
-   (75% false-reject), and therefore **ship it as ADVISORY with the badge withheld** rather than fake a
-   better number. Measured honesty is the differentiator.
-3. **Fails closed, provably.** A prompt-injection invariant test proves free text can never alter a
-   normalized fact, a rule, or a gate (byte-equal, no-exception). Failures surface as
-   `FAILED`/`FLAGGED_FOR_REVIEW`, **never** as a silent "no findings."
-4. **Fully deployed, end-to-end, on real cloud**: Scheduler → Cloud Tasks → private Cloud Run → **real
-   Gemini** → Firestore → a public UI that reads the **real** results back. Not a mock.
-5. **The build process is itself a submission-worthy artifact**: a 20-phase protocol with
-   machine-checkable gates, a persistent decision log, and one commit per tested checkpoint. See
-   *"Built with AI agents, visibly"* below.
-6. **Radical transparency about scope.** Synthetic data, US-label jurisdiction, ADVISORY review,
-   variable latency: all stated up front (`SPEC §79`). Integrity reads as strength, not weakness.
+### Innovation & Operational Utility — the 40%
+- **A full agentic *workflow*, not a chatbot.** Unprompted, ChartPilot fetches the record, computes clinical
+  facts, retrieves current evidence, drafts findings, self-checks with a *second* model, and persists a
+  ranked one-page brief — the "Taskmaster" ideal of an agent that handles the details and puts the right
+  information in front of the right person.
+- **It removes real clinical friction on its own.** A doctor has ~2 minutes to skim a chart; ChartPilot does
+  the reading the night before and surfaces the one thing that matters (e.g. a rising potassium on an ACE
+  inhibitor in a patient with declining renal function) — *with its receipts*.
+
+### Architectural Discipline & Tech Stack — the 30%
+- **Safety is structural, not vibes.** Deterministic code owns every fact; the LLM is only an editor; a
+  **blinded** Model B tries to *falsify* each claim; a final gate **fails closed**. A byte-equal
+  prompt-injection invariant test proves free text can never alter a fact, a rule, or a gate.
+- **Credential security & least privilege by design.** Two separate service accounts (a runtime identity vs.
+  an invoke-only identity), the Gemini key in **Secret Manager**, a private OIDC-only backend, all infra
+  hard-pinned to an isolated GCP project. Failures are durable statuses (`FAILED`/`FLAGGED_FOR_REVIEW`),
+  **never** a silent "no findings."
+- **Measured, not asserted.** Model B was tested against a corruption suite, found **over-aggressive**
+  (75% false-reject), and is therefore shipped **ADVISORY with the badge withheld** — we refused to re-tune
+  it against its own test set to fake a better number. Honest measurement *is* the discipline.
+
+### Demo & Production Readiness — the 30%
+- **Fully deployed, end-to-end, on real Google Cloud** — Scheduler → Cloud Tasks → private Cloud Run →
+  **real Gemini** → Firestore → a public UI that reads the **real** results back ([console proof below](#-deployed-on-google-cloud--the-proof)). Not a mock.
+- **Reproducible in one command** ([Run it in 60 seconds](#-run-it-in-60-seconds)): a hermetic `make check`
+  gate (452 network-blocked tests) plus green CI, a clear architecture diagram, a 4-min demo video, and a
+  live URL judges can click right now.
+- **Radical transparency about scope.** Synthetic data, US-label jurisdiction, ADVISORY review, variable
+  latency — all stated up front. Integrity reads as strength, not weakness.
 
 ---
 
@@ -72,6 +150,14 @@ submission period.** See `ATTRIBUTION.md` for the authoritative per-component le
 ---
 
 ## How it works
+
+<p align="center">
+  <a href="docs/images/diagram-architecture.png">
+    <img alt="ChartPilot architecture: (A) a run flows Cloud Scheduler → Cloud Tasks → private Cloud Run → Gemini → Firestore → public read-only UI; (B) inside each patient, a safety pipeline where deterministic code owns every fact, the LLM only edits, a blinded Model B tries to falsify, and the gate fails closed; (C) a self-improving loop that promotes a better prompt only when review-survival goes up." src="docs/images/diagram-architecture.png" width="100%">
+  </a>
+  <br/>
+  <sub><i>The whole system on one page: the cloud run (A), the per-patient safety pipeline (B), and the self-improving loop (C). Click to enlarge.</i></sub>
+</p>
 
 ### In plain language, step by step
 1. **Read the chart.** Pull the patient's longitudinal FHIR record (labs, meds, diagnoses, allergies).
@@ -172,6 +258,65 @@ labelled **"Safety demonstration"** so a reviewer can see exactly how failures s
 
 ---
 
+## 🖥️ See it in action
+
+**The queue — one card per patient, with the failure case shown on purpose.** Flagged, completed, and a
+deliberately-failed chart under a labelled *"Safety demonstration"*: ChartPilot never falls back to a
+silent empty page that could be mistaken for a clean chart.
+
+<p align="center">
+  <a href="docs/images/frontend-01-patient-queue-desktop.png">
+    <img alt="Patient queue: cards for Aarav Sharma (1 critical finding), Priya Nair (completed, no high-priority findings), Rahul Verma (1 moderate), Sanjay Rao (1 high-priority), and a Safety-demonstration card for Meera Iyer showing a distinct Processing Error state." src="docs/images/frontend-01-patient-queue-desktop.png" width="90%">
+  </a>
+</p>
+
+**A finding — never a claim without its receipt.** Every finding carries a plain-language rationale, a
+recommended action, and the exact chart evidence it was built from (labs with dates and reference ranges,
+active meds, active diagnoses), plus one-tap *Confirm / Override / Correct* clinician controls.
+
+<p align="center">
+  <a href="docs/images/frontend-02-patient-flagged-aarav.png">
+    <img alt="Finding detail for Aarav Sharma: a CRITICAL / REQUIRES REVIEW finding that a recent potassium of 6.2 mmol/L on lisinopril 20 mg suggests possible ACE-inhibitor-associated hyperkalemia, with rationale, recommended action, supporting chart evidence, and Confirm/Override/Correct controls." src="docs/images/frontend-02-patient-flagged-aarav.png" width="90%">
+  </a>
+</p>
+
+**The evidence drawer — click "View evidence" and see the source itself.** The verbatim FDA-label span,
+the snapshot ID and source URL, the *computed* character offsets (never the ones the model claimed), a
+green row of deterministic citation checks, and the blinded Model-B cross-check verdict.
+
+<p align="center">
+  <a href="docs/images/frontend-07-evidence-drawer.png">
+    <img alt="Evidence drawer: the U.S. FDA label for lisinopril with a verbatim supporting span about hyperkalemia, computed source location (characters 4218–4512), citation verification badges (verified span, source retrievable, snapshot hash matches, span located verbatim, offsets resolve to span, publisher allow-listed), and the Model B cross-check confirming the span supports the claim." src="docs/images/frontend-07-evidence-drawer.png" width="90%">
+  </a>
+</p>
+
+**The manual-review panel — the doctor's own cross-check.** A full longitudinal timeline (labs, meds,
+diagnoses, safety signals) and recent labs with inline trend sparklines, so the clinician can verify the
+AI against the raw record without leaving the page.
+
+<p align="center">
+  <a href="docs/images/frontend-08-review-panel.png">
+    <img alt="Manual-review panel: a chronological patient history from 2024 to 2026 showing potassium and eGFR trends, hypertension and CKD diagnoses, lisinopril initiation, and a recent-labs section with sparklines for potassium (critical), eGFR (low), and creatinine (high)." src="docs/images/frontend-08-review-panel.png" width="90%">
+  </a>
+</p>
+
+<details>
+<summary><b>More screenshots</b> — completed & error states, and the mobile layout</summary>
+
+<br/>
+
+| Completed (no high-priority findings) | Safety demonstration (processing error) |
+|---|---|
+| [<img alt="A completed patient with no high-priority findings" src="docs/images/frontend-03-patient-completed.png" width="100%">](docs/images/frontend-03-patient-completed.png) | [<img alt="The deliberately-failed patient shown with a distinct processing-error state" src="docs/images/frontend-04-patient-error-state.png" width="100%">](docs/images/frontend-04-patient-error-state.png) |
+
+| Queue (mobile) | Patient detail (mobile) |
+|---|---|
+| [<img alt="The patient queue on a mobile viewport" src="docs/images/frontend-05-patient-queue-mobile.png" width="55%">](docs/images/frontend-05-patient-queue-mobile.png) | [<img alt="A patient detail page on a mobile viewport" src="docs/images/frontend-06-patient-detail-mobile.png" width="55%">](docs/images/frontend-06-patient-detail-mobile.png) |
+
+</details>
+
+---
+
 ## The deployed system (the backend, made visible)
 
 Two Cloud Run services in the **isolated** GCP project `chartpilot-agentic` (`asia-south1`):
@@ -201,6 +346,23 @@ flowchart TB
   end
   User[Judge / clinician browser] --> FE
 ```
+
+### ☁️ Deployed on Google Cloud — the proof
+
+Not a claim — the live GCP console for the isolated `chartpilot-agentic` project (`asia-south1`). Both
+Cloud Run services are up, the nightly Scheduler job's last execution **succeeded**, the per-patient Cloud
+Tasks queue exists, and Firestore holds the **real** persisted run documents the public UI reads back.
+
+| Cloud Run — two live services | Cloud Scheduler — nightly job, last run ✅ |
+|---|---|
+| [<img alt="Google Cloud Run console for project ChartPilot showing two live services, chartpilot-api and chartpilot-frontend, both in asia-south1." src="docs/images/gcp/01_cloud_run.png" width="100%">](docs/images/gcp/01_cloud_run.png) | [<img alt="Cloud Scheduler console showing the chartpilot-nightly job in asia-south1, Enabled, last execution Success, frequency 0 2 * * * Asia/Kolkata, targeting the private /enqueue-run endpoint." src="docs/images/gcp/06_cloud_scheduler.png" width="100%">](docs/images/gcp/06_cloud_scheduler.png) |
+
+| Cloud Tasks — per-patient queue | Firestore — real persisted run documents |
+|---|---|
+| [<img alt="Cloud Tasks console showing the chartpilot-queue push queue in asia-south1 with a max dispatch rate of 10/s." src="docs/images/gcp/05_cloud_tasks.png" width="100%">](docs/images/gcp/05_cloud_tasks.png) | [<img alt="Firestore console showing the runs collection with demo and smoke-test run documents, each holding patients and presentations subcollections." src="docs/images/gcp/07_firestore.png" width="100%">](docs/images/gcp/07_firestore.png) |
+
+All of this is reproducible from the ordered, idempotent scripts in [`infra/`](infra/), hard-pinned to
+`--project=chartpilot-agentic` so no other project (including the author's Iatronix) is ever touched.
 
 ---
 
@@ -316,9 +478,9 @@ cd frontend && pnpm install && pnpm run build && pnpm test   # production build 
 
 ## Repository docs
 `EVALUATION.md` (measured results) · `TECHNICAL_DECISIONS.md` (TD-001…013) · `ATTRIBUTION.md` (reuse ledger)
-· `SUBMISSION.md` (Devpost content) · `journal.md` (build log + mistakes ledger) ·
-`evidence/phase_*.txt` (per-phase machine-checked gates) · `infra/` (reproducible deploy) ·
-`git tag -l 'phase-*'` (recovery checkpoints).
+· `SUBMISSION.md` (Devpost content) · `CONTRIBUTING.md` (how to run the gate) · `LICENSE` (MIT) ·
+`journal.md` (build log + mistakes ledger) · `evidence/phase_*.txt` (per-phase machine-checked gates) ·
+`infra/` (reproducible deploy) · `git tag -l 'phase-*'` (recovery checkpoints).
 
 > A note on references: markers like `§53` or `SPEC §22` throughout these docs point to sections of the
 > internal build specification. The team keeps that spec in its private working notes rather than in the

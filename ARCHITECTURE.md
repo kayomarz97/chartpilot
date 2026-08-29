@@ -203,6 +203,14 @@ make live-test               # ⚠️ MANUAL ONLY: real Gemini, COSTS TOKENS, ne
 cd frontend && pnpm install && pnpm run build && pnpm test   # frontend build + axe a11y
 ```
 
+**CI** (`.github/workflows/ci.yml`): on every push/PR to `main`/`dev`, GitHub Actions installs `uv`
+(+ Python 3.11), runs `uv sync --frozen` in `backend/`, then runs the same hermetic `make check`
+gate and uploads `evidence/phase_*.txt` as a build artifact. The README's CI badge reflects it.
+
+**Other repo-root files** (not backend modules): `README.md` (narrative + screenshots under `docs/images/`,
+incl. `docs/images/gcp/` deployment-proof shots), `LICENSE` (MIT), `CONTRIBUTING.md`, `SUBMISSION.md`
+(Devpost copy), `EVALUATION.md`, `TECHNICAL_DECISIONS.md`, `ATTRIBUTION.md`, `journal.md`, `infra/`.
+
 ---
 
 ## Prompts & model pinning
